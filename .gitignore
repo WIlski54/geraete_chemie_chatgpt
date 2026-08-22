@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+data/*.db
+data/*.db-shm
+data/*.db-wal
+tmp/
+KeyAES.docx
+*.iabackup
+.coverage
+htmlcov/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#006AB3">
+  <title>Laborgeräte entdecken</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260822a') }}">
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
+  <script>
+    window.MathJax = {tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$','$$'], ['\\[','\\]']]}, svg: {fontCache: 'global'}};
+    window.WORKSHEET_META = {{ {'appId': app_id, 'pseudonym': pseudonym, 'klasse': klasse, 'studentId': student_id, 'resumeToken': resume_token}|tojson }};
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" defer></script>
+  <script src="{{ url_for('static', filename='vendor/fabric-5.3.0.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/app.js', v='20260822e') }}" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="ws-header">
+      <div class="header-logos">
+        <img src="{{ url_for('static', filename='img/logo-gsm-transparent.png') }}" alt="Gesamtschule Meiderich" class="logo-gsm">
+        <div class="header-text">
+          <span class="eyebrow light">Chemie · Jahrgang 7 · Klassenunterricht</span>
+          <h1 class="ws-title">Laborgeräte entdecken</h1>
+          <p class="ws-subtitle">Dein erster Rundgang durch den Chemieraum</p>
+        </div>
+        <img src="{{ url_for('static', filename='img/WK_8.png') }}" alt="WK" class="logo-wk">
+      </div>
+      <div class="header-bottom">
+        <div><span class="student-chip">👤 {{ pseudonym }} · Klasse {{ klasse }}</span><span class="autosave-indicator is-pending" id="autosave-indicator" role="status" aria-live="polite"><i aria-hidden="true"></i><span id="autosave-text">Arbeitsstand wird vorbereitet …</span></span></div>
+        <form action="{{ url_for('student_logout') }}" method="post"><button class="header-link" type="submit">Abmelden</button></form>
+      </div>
+    </header>
+
+    <section class="progress-panel" aria-label="Lernfortschritt">
+      <div>
+        <span class="eyebrow">Dein Fortschritt</span>
+        <strong id="progress-label">0 von 7 Lernstationen</strong>
+      </div>
+      <div class="progress-track" aria-hidden="true"><span id="progress-fill"></span></div>
+    </section>
+
+    <nav class="tab-bar" aria-label="Bereiche">
+      <button class="tab-btn active" data-tab="material" aria-selected="true"><span>01</span> Material</button>
+      <button class="tab-btn" data-tab="start" aria-selected="false"><span>02</span> Einstieg</button>
+      <button class="tab-btn" data-tab="quiz" aria-selected="false"><span>03</span> Geräte-Quiz</button>
+      <button class="tab-btn" data-tab="drawing" aria-selected="false"><span>04</span> Zeichenlabor</button>
+      <button class="tab-btn" data-tab="domino" aria-selected="false"><span>05</span> Domino</button>
+      <button class="tab-btn" data-tab="backup" aria-selected="false"><span>06</span> Sicherung</button>
+    </nav>
+
+    <main>
+      <section class="tab-panel active" id="panel-material" data-panel="material">
+        <div class="section-heading">
+          <div><span class="eyebrow">Originalmaterial</span><h2>Deine Geräteübersicht</h2></div>
+          <p>Öffne die Übersicht erst, wenn du sie brauchst. Sie bleibt beim Start bewusst eingeklappt.</p>
+        </div>
+        <details class="material-card material-disclosure">
+          <summary>
+            <span><small>Arbeitsblatt 1</small><strong>Laborgeräte · Übersicht</strong></span>
+            <span class="disclosure-action"><span class="show-label">Ausklappen</span><span class="hide-label">Einklappen</span><i aria-hidden="true"></i></span>
+          </summary>
+          <div class="material-content">
+            <div class="material-note">PDF und JPG zeigen dieselbe Übersicht. Die Seitenansicht funktioniert zuverlässig auf dem iPad.</div>
+            <div class="material-pages"><img src="{{ url_for('static', filename='material/laborgeraete_uebersicht_1.png') }}" alt="Arbeitsblatt Laborgeräte, Seite 1"></div>
+            <div class="material-actions">
+              <button class="btn btn-primary open-reader"
+                data-reader-title="Arbeitsblatt 1 · Laborgeräte"
+                data-reader-pages='["{{ url_for('static', filename='material/laborgeraete_uebersicht_1.png') }}"]'
+                data-reader-pdf="{{ url_for('static', filename='material/laborgeraete_uebersicht.pdf') }}">Im Fokus-Reader anzeigen</button>
+              <a class="btn btn-outline" href="{{ url_for('static', filename='material/laborgeraete_uebersicht.pdf') }}" target="_blank" rel="noopener">Original-PDF öffnen</a>
+              <a class="btn btn-outline" href="{{ url_for('static', filename='material/laborgeraete_uebersicht_original.jpg') }}" target="_blank" rel="noopener">Original-JPG öffnen</a>
+            </div>
+          </div>
+        </details>
+        <div class="tip-card"><span aria-hidden="true">🔎</span><div><strong>Forscher-Tipp</strong><p>Suche auf der Übersicht zuerst die Geräte, die du schon aus dem Alltag kennst: Brille, Bürste, Trichter oder Thermometer.</p></div></div>
+      </section>
+
+      <section class="tab-panel" id="panel-start" data-panel="start" hidden>
+        <div class="hero-card intro-hero">
+          <div>
+            <span class="eyebrow light">Einführendes Arbeitsblatt</span>
+            <h2>Warum gibt es so viele Laborgeräte?</h2>
+            <p>Im Chemielabor hat jedes Gerät eine bestimmte Aufgabe. Manche Geräte halten Stoffe fest, andere messen, erhitzen, trennen oder schützen. Ein passendes Gerät macht einen Versuch sicherer und genauer.</p>
+          </div>
+          <img class="intro-kit-image" src="{{ url_for('static', filename='img/Geräte/Kiste.jpg') }}" alt="Geöffnete Materialkiste mit Dreifuß, Erlenmeyerkolben und Tiegelzange">
+        </div>
+
+        <div class="device-family-grid" aria-label="Fünf wichtige Geräteaufgaben">
+          <figure><img src="{{ url_for('static', filename='img/Geräte/Becherglas.png') }}" alt="Becherglas"><figcaption><strong>Aufbewahren</strong><span>Becherglas</span></figcaption></figure>
+          <figure><img src="{{ url_for('static', filename='img/Geräte/Messzylinder.png') }}" alt="Messzylinder"><figcaption><strong>Messen</strong><span>Messzylinder</span></figcaption></figure>
+          <figure><img src="{{ url_for('static', filename='img/Geräte/Gasbrenner.png') }}" alt="Gasbrenner"><figcaption><strong>Erhitzen</strong><span>Gasbrenner</span></figcaption></figure>
+          <figure><img src="{{ url_for('static', filename='img/Geräte/Mörser.png') }}" alt="Mörser mit Pistill"><figcaption><strong>Zerkleinern</strong><span>Mörser</span></figcaption></figure>
+          <figure><img src="{{ url_for('static', filename='img/Geräte/Stativ.png') }}" alt="Stativ"><figcaption><strong>Halten</strong><span>Stativ</span></figcaption></figure>
+        </div>
+
+        <article class="task-card" data-task-num="1" data-niveau="A">
+          <header class="task-header"><span class="task-number">1</span><div><span class="eyebrow">Sicher starten</span><h3>Schützen, halten oder messen?</h3></div><select class="niveau-select" aria-label="Niveau Aufgabe 1"><option value="A">🟢 A · Basis</option><option value="B">🟡 B · Standard</option><option value="C">🔴 C · Experte</option></select></header>
+          <div data-n="A">
+            <p>Welches Gerät schützt deine Augen?</p>
+            <div class="choice-grid" data-choice-group="task1A">
+              <button class="choice-btn" data-value="Becherglas">Becherglas</button>
+              <button class="choice-btn" data-value="Schutzbrille" data-correct="true">Schutzbrille</button>
+              <button class="choice-btn" data-value="Spatel">Spatel</button>
+            </div>
+          </div>
+          <div data-n="B" hidden><p>Nenne je ein Gerät zum <strong>Schützen</strong>, <strong>Messen</strong> und <strong>Erhitzen</strong>.</p><textarea id="task1B" data-backup placeholder="Schützen: …&#10;Messen: …&#10;Erhitzen: …"></textarea></div>
+          <div data-n="C" hidden><p>Erkläre, warum ein Becherglas trotz Skala nicht für eine genaue Volumenmessung geeignet ist.</p><textarea id="task1C" data-backup placeholder="Ein Becherglas …"></textarea></div>
+          <div class="task-actions"><button class="btn btn-primary save-task" data-task="1">Antwort speichern</button></div>
+          <div class="feedback-box" id="feedback-task1" role="status"></div>
+        </article>
+
+        <article class="task-card" data-task-num="2" data-niveau="A">
+          <header class="task-header"><span class="task-number">2</span><div><span class="eyebrow">Gerät und Aufgabe</span><h3>Wofür wird es benutzt?</h3></div><select class="niveau-select" aria-label="Niveau Aufgabe 2"><option value="A">🟢 A · Basis</option><option value="B">🟡 B · Standard</option><option value="C">🔴 C · Experte</option></select></header>
+          <div data-n="A" class="structured-grid">
+            <label>Reagenzglas<select id="task2A-reagenzglas" data-structured><option value="">Aufgabe wählen</option><option>kleine Stoffmengen untersuchen</option><option>genau 100 ml messen</option><option>Augen schützen</option></select></label>
+            <label>Messzylinder<select id="task2A-messzylinder" data-structured><option value="">Aufgabe wählen</option><option>Flüssigkeitsvolumen messen</option><option>Feststoffe zerreiben</option><option>Gefäß festhalten</option></select></label>
+            <label>Mörser<select id="task2A-moerser" data-structured><option value="">Aufgabe wählen</option><option>Feststoffe zerreiben</option><option>Flüssigkeit verspritzen</option><option>Gas erhitzen</option></select></label>
+          </div>
+          <div data-n="B" hidden><p>Beschreibe die Aufgabe von Reagenzglas, Messzylinder, Trichter und Spatel in eigenen Worten.</p><textarea id="task2B" data-backup></textarea></div>
+          <div data-n="C" hidden><p>Ordne fünf Geräte den Funktionsgruppen <em>Aufbewahren, Messen, Erhitzen, Trennen, Schützen</em> zu. Begründe eine Zuordnung.</p><textarea id="task2C" data-backup></textarea></div>
+          <div class="task-actions"><button class="btn btn-primary save-task" data-task="2">Antwort speichern</button></div>
+          <div class="feedback-box" id="feedback-task2" role="status"></div>
+        </article>
+
+        <article class="task-card" data-task-num="3" data-niveau="A">
+          <header class="task-header"><span class="task-number">3</span><div><span class="eyebrow">Passend auswählen</span><h3>Welches Gerät brauchst du?</h3></div><select class="niveau-select" aria-label="Niveau Aufgabe 3"><option value="A">🟢 A · Basis</option><option value="B">🟡 B · Standard</option><option value="C">🔴 C · Experte</option></select></header>
+          <div data-n="A"><p>Du möchtest 50 ml Wasser möglichst genau abmessen.</p><div class="choice-grid" data-choice-group="task3A"><button class="choice-btn" data-value="Messzylinder" data-correct="true">Messzylinder</button><button class="choice-btn" data-value="Becherglas">Becherglas</button><button class="choice-btn" data-value="Uhrglas">Uhrglas</button></div></div>
+          <div data-n="B" hidden><p>Wähle passende Geräte: Wasser abmessen, Pulver aufnehmen, Flüssigkeit in ein schmales Gefäß füllen.</p><textarea id="task3B" data-backup placeholder="Abmessen: …&#10;Pulver: …&#10;Umfüllen: …"></textarea></div>
+          <div data-n="C" hidden><p>Plane eine sichere Gerätekette, um eine kleine Menge Salz in Wasser zu lösen, vorsichtig zu erhitzen und danach abkühlen zu lassen.</p><textarea id="task3C" data-backup></textarea></div>
+          <div class="task-actions"><button class="btn btn-primary save-task" data-task="3">Antwort speichern</button><button class="btn btn-ai ai-text-feedback" data-task="3">Mit KI besprechen</button></div>
+          <div class="feedback-box" id="feedback-task3" role="status"></div>
+        </article>
+      </section>
+
+      <section class="tab-panel" id="panel-quiz" data-panel="quiz" hidden>
+        <div class="section-heading"><div><span class="eyebrow">Sehen und benennen</span><h2>Geräte-Quiz</h2></div><p>Die Lernapp zeigt dir ein freigestelltes Gerätebild. Tippe den Namen oder schreibe ihn mit dem Stift.</p></div>
+        <div class="split-workspace">
+          <article class="canvas-card">
+            <div class="canvas-toolbar"><span id="quiz-counter">Runde 1</span><button class="btn btn-outline" id="quiz-next" type="button">Anderes Gerät</button></div>
+            <canvas id="device-quiz-canvas" width="720" height="420" aria-label="Abbildung eines Laborgeräts"></canvas>
+            <p class="canvas-caption">Wie heißt dieses Laborgerät?</p>
+          </article>
+          <article class="answer-card">
+            <div class="mode-switch" role="group" aria-label="Antwortart"><button class="mode-btn active" data-quiz-mode="typing">Tastatur</button><button class="mode-btn" data-quiz-mode="handwriting">Handschrift</button></div>
+            <div id="quiz-typing-mode"><label class="field-label" for="quiz-answer">Gerätename</label><input id="quiz-answer" data-backup autocomplete="off" placeholder="Deine Antwort …"><button class="btn btn-primary btn-wide" id="quiz-check" type="button">Antwort prüfen</button></div>
+            <div id="quiz-handwriting-mode" hidden><p class="muted">Schreibe den Gerätenamen groß und deutlich.</p><canvas id="handwriting-canvas" class="draw-canvas" width="720" height="260" aria-label="Handschriftfeld"></canvas><div class="canvas-actions"><button class="btn btn-outline clear-canvas" data-canvas="handwriting-canvas">Leeren</button><button class="btn btn-ai" id="handwriting-check">Handschrift mit KI prüfen</button></div></div>
+            <div class="feedback-box" id="quiz-feedback" role="status"></div>
+            <div class="score-line"><span>Richtig erkannt</span><strong id="quiz-score">0</strong></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="panel-drawing" data-panel="drawing" hidden>
+        <div class="section-heading"><div><span class="eyebrow">Name wird Bild</span><h2>Zeichenlabor</h2></div><p>Zeichne nur die wichtigen Formmerkmale. Es geht nicht um Kunst, sondern um genaues Beobachten.</p></div>
+        <article class="drawing-workspace">
+          <header><div><span class="eyebrow">Dein Zeichenauftrag</span><h3 id="drawing-device-name">Becherglas</h3></div><button class="btn btn-outline" id="drawing-next">Neuer Auftrag</button></header>
+          <div class="object-editor-toolbar" aria-label="Zeichenwerkzeuge">
+            <div class="editor-tool-group" role="group" aria-label="Werkzeug wählen">
+              <button class="editor-tool active" type="button" data-drawing-tool="select" aria-pressed="true"><span aria-hidden="true">↖</span> Auswählen</button>
+              <button class="editor-tool" type="button" data-drawing-tool="pencil" aria-pressed="false"><span aria-hidden="true">✎</span> Stift</button>
+              <button class="editor-tool" type="button" data-drawing-tool="eraser" aria-pressed="false"><span aria-hidden="true">⌫</span> Radierer</button>
+              <button class="editor-tool" type="button" data-drawing-tool="line" aria-pressed="false"><span aria-hidden="true">╱</span> Linie</button>
+              <button class="editor-tool" type="button" data-drawing-tool="rect" aria-pressed="false"><span aria-hidden="true">▭</span> Rechteck</button>
+              <button class="editor-tool" type="button" data-drawing-tool="ellipse" aria-pressed="false"><span aria-hidden="true">◯</span> Ellipse</button>
+              <button class="editor-tool" type="button" data-drawing-tool="text" aria-pressed="false"><span aria-hidden="true">T</span> Text</button>
+            </div>
+            <div class="editor-settings">
+              <div class="color-picker-panel" aria-label="Zeichenfarbe wählen">
+                <span class="color-picker-label">Farbe</span>
+                <div class="color-swatches" role="group" aria-label="Schnelle Farbauswahl">
+                  <button class="color-swatch active" type="button" data-drawing-color="#17212b" style="--swatch: #17212b" aria-label="Schwarz" aria-pressed="true"></button>
+                  <button class="color-swatch" type="button" data-drawing-color="#006ab3" style="--swatch: #006ab3" aria-label="Blau" aria-pressed="false"></button>
+                  <button class="color-swatch" type="button" data-drawing-color="#c0007f" style="--swatch: #c0007f" aria-label="Magenta" aria-pressed="false"></button>
+                  <button class="color-swatch" type="button" data-drawing-color="#d52b2f" style="--swatch: #d52b2f" aria-label="Rot" aria-pressed="false"></button>
+                  <button class="color-swatch" type="button" data-drawing-color="#17823b" style="--swatch: #17823b" aria-label="Grün" aria-pressed="false"></button>
+                  <button class="color-swatch" type="button" data-drawing-color="#e66a00" style="--swatch: #e66a00" aria-label="Orange" aria-pressed="false"></button>
+                </div>
+                <label class="color-wheel-control" title="Beliebige Farbe wählen">
+                  <span class="color-wheel-ring"><input id="drawing-color" type="color" value="#17212b" aria-label="Beliebige Zeichenfarbe wählen"></span>
+                  <span>Eigene Farbe</span>
+                </label>
+              </div>
+              <label class="stroke-control" for="brush-size"><span>Strich</span><input id="brush-size" type="range" min="2" max="16" value="5"><output id="brush-size-value" for="brush-size">5</output></label>
+            </div>
+          </div>
+          <p class="editor-help" id="drawing-tool-help">Objekte antippen, verschieben, drehen oder an den Griffen skalieren.</p>
+          <div class="object-canvas-shell"><canvas id="drawing-canvas" width="1000" height="620" aria-label="Editierbare Zeichenfläche für ein Laborgerät"></canvas></div>
+          <div class="canvas-actions" aria-label="Aktionen für die Zeichnung"><button class="btn btn-outline" id="copy-selected" type="button" aria-keyshortcuts="Control+C Meta+C" disabled>Auswahl kopieren</button><button class="btn btn-outline" id="paste-drawing" type="button" aria-keyshortcuts="Control+V Meta+V" disabled>Kopie einfügen</button><button class="btn btn-outline" id="delete-selected" type="button">Auswahl löschen</button><button class="btn btn-outline" id="clear-drawing" type="button">Alles leeren</button><button class="btn btn-primary" id="save-drawing" type="button">Zeichnung speichern</button><button class="btn btn-ai" id="analyze-drawing" type="button">Mit KI analysieren</button></div>
+          <p class="editor-help">Am PC: Strg+C und Strg+V. Auf dem iPad nutzt du „Auswahl kopieren“ und „Kopie einfügen“.</p>
+          <p class="drawing-save-state" id="drawing-save-state" role="status">Noch nicht im Lehrer-Dashboard gespeichert.</p>
+          <div class="feedback-box" id="drawing-feedback" role="status"></div>
+        </article>
+      </section>
+
+      <section class="tab-panel" id="panel-domino" data-panel="domino" hidden>
+        <div class="section-heading"><div><span class="eyebrow">Spielerisch festigen</span><h2>Laborgeräte-Domino</h2></div><p>Der Name rechts bestimmt, welches Gerätebild als Nächstes angelegt werden muss. Tippe auf den passenden Stein.</p></div>
+        <div class="domino-status"><span id="domino-message">Finde den nächsten Stein.</span><strong id="domino-progress">1 / 8</strong></div>
+        <div class="domino-chain" id="domino-chain" aria-label="Domino-Kette"></div>
+        <h3 class="choice-heading">Verfügbare Steine</h3>
+        <div class="domino-options" id="domino-options"></div>
+        <button class="btn btn-outline" id="domino-restart">Neu mischen</button>
+      </section>
+
+      <section class="tab-panel" id="panel-backup" data-panel="backup" hidden>
+        <div class="section-heading"><div><span class="eyebrow">Deine zusätzliche Kopie</span><h2>Manuelle Sicherung</h2></div><p>Die App sichert deinen Arbeitsstand automatisch auf diesem Gerät und vorübergehend auf dem Server der Lernapp; hier kannst du zusätzlich selbst eine JSON-Datei anlegen oder laden.</p></div>
+        <div class="backup-grid">
+          <article class="backup-card"><span class="backup-icon">↓</span><h3>JSON sichern</h3><p>Speichert Antworten, Niveaus, Auswahl, Fortschritt, aktiven Reiter und deine Zeichnungen.</p><button class="btn btn-primary btn-wide" id="export-json">JSON sichern</button></article>
+          <article class="backup-card"><span class="backup-icon">↑</span><h3>JSON laden</h3><p>Wähle eine Sicherungsdatei. Danach entscheidest du selbst, welche Antworten du erneut an die Lehrkraft sendest.</p><label class="btn btn-outline btn-wide file-btn">Datei auswählen<input id="import-file" type="file" accept="application/json,.json"></label></article>
+        </div>
+        <details class="fallback-card" id="json-fallback"><summary>iPad-Notfallweg: JSON kopieren oder einfügen</summary><textarea id="json-text" spellcheck="false" placeholder="Hier erscheint deine Sicherung oder du fügst eine Sicherung ein."></textarea><div class="task-actions"><button class="btn btn-outline" id="copy-json">Text kopieren</button><button class="btn btn-primary" id="import-text">Eingefügten Text laden</button></div><div class="feedback-box" id="backup-feedback" role="status"></div></details>
+      </section>
+    </main>
+  </div>
+
+  <section id="worksheet-reader" class="worksheet-reader" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="reader-title">
+    <header class="reader-header"><div><span class="eyebrow light">Fokus-Reader</span><h2 id="reader-title">Arbeitsblatt</h2></div><div class="reader-controls"><button id="reader-image-mode" class="btn btn-light reader-mode active" aria-pressed="true">Seitenansicht</button><button id="reader-pdf-mode" class="btn btn-ghost-light reader-mode" aria-pressed="false">PDF-Ansicht</button><a id="reader-open-pdf" class="btn btn-ghost-light" href="#" target="_blank" rel="noopener">PDF separat öffnen</a><button id="reader-close" class="btn btn-accent">Reader ausblenden</button></div></header>
+    <div class="reader-stage"><div id="reader-image-view" class="reader-view active"><div id="reader-image-pages" class="reader-image-pages"></div></div><div id="reader-pdf-view" class="reader-view"><object id="reader-pdf-object" data="" type="application/pdf"><p>Die PDF-Ansicht wird von diesem Browser nicht unterstützt.</p></object></div></div>
+    <footer class="reader-footer"><span>Mit „Reader ausblenden“ kehrst du zur Lernapp zurück.</span><button id="reader-close-bottom" class="btn btn-outline">Reader ausblenden</button></footer>
+  </section>
+
+  <button class="tutor-fab" id="tutor-toggle" aria-expanded="false" aria-controls="tutor-panel"><img src="{{ url_for('static', filename='img/gsm_avatar.png') }}" alt=""><span>KI-Tutor</span></button>
+  <aside class="tutor-panel" id="tutor-panel" hidden>
+    <header><img src="{{ url_for('static', filename='img/gsm_avatar.png') }}" alt="GSM-Professor"><div><strong>GSM-Professor</strong><small>KI-Tutor · Freigabe nötig</small></div><button id="tutor-close" aria-label="Tutor schließen">×</button></header>
+    <div class="chat-messages" id="chat-messages"><div class="chat-message assistant">Hallo! Welche Frage hast du zu den Laborgeräten?</div></div>
+    <div class="chat-status" id="chat-status">Schreibe zuerst deine echte Frage und fordere dann die Freigabe an.</div>
+    <div class="chat-compose"><textarea id="chat-input" rows="2" placeholder="Deine Frage …"></textarea><button class="btn btn-outline" id="chat-request">Freigabe anfragen</button><button class="btn btn-ai" id="chat-send" disabled>Senden</button></div>
+  </aside>
+
+  <div class="ki-overlay" id="ki-overlay" hidden>
+    <div class="ki-modal" role="dialog" aria-modal="true" aria-labelledby="ki-modal-title"><span class="ki-modal-icon" id="ki-modal-icon">🤖</span><h3 id="ki-modal-title">KI-Funktion freigeben</h3><p id="ki-modal-text"></p><div class="waiting-status" id="ki-waiting" hidden><span class="spinner"></span>Warte auf die Lehrkraft …</div><button class="btn btn-ai btn-wide" id="ki-request-confirm">Freigabe anfragen</button><button class="btn btn-quiet btn-wide" id="ki-request-cancel">Abbrechen</button></div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

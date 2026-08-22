@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Laborgeräte · Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260822a') }}">
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
+  <script>window.TEACHER_TOKEN={{ teacher_action_token|tojson }}; window.DAILY_LIMIT={{ daily_limit }};</script>
+  <script src="{{ url_for('static', filename='js/dashboard.js', v='20260822f') }}" defer></script>
+</head>
+<body class="dashboard-page">
+  <header class="dashboard-header">
+    <div class="dashboard-brand"><img src="{{ url_for('static', filename='img/logo-gsm-transparent.png') }}" alt="GSM"><div><span class="eyebrow light">Chemie · Klasse 7</span><h1>Laborgeräte · Live-Dashboard</h1></div></div>
+    <div class="dashboard-actions"><button class="btn btn-ghost-light" id="refresh-dashboard">Aktualisieren</button><form action="{{ url_for('lehrer_logout') }}" method="post"><button class="btn btn-accent" type="submit">Abmelden</button></form></div>
+  </header>
+  <main class="dashboard-main">
+    <section class="kpi-grid" aria-label="Kennzahlen">
+      <article><span>Aktive Lernende</span><strong id="kpi-students">0</strong></article>
+      <article><span>Offene KI-Anfragen</span><strong id="kpi-requests">0</strong></article>
+      <article><span>Gespeicherte Antworten</span><strong id="kpi-answers">0</strong></article>
+      <article><span>KI-Tokens heute</span><strong id="kpi-tokens">0</strong></article>
+    </section>
+    <section class="dashboard-card budget-card"><div><span class="eyebrow">Tagesbudget</span><strong id="budget-label">0 / {{ daily_limit }}</strong></div><div class="progress-track"><span id="budget-fill"></span></div></section>
+    <div class="dashboard-columns">
+      <section class="dashboard-card"><header class="card-title"><div><span class="eyebrow">Jetzt prüfen</span><h2>KI-Freigaben</h2></div><span class="count-badge" id="request-count">0</span></header><div id="request-list" class="request-list"><p class="empty-state">Keine offenen Anfragen.</p></div></section>
+      <section class="dashboard-card"><header class="card-title"><div><span class="eyebrow">Kurzfristig auf dem App-Server</span><h2>Temporäre Sitzungen</h2></div></header><p class="muted">Diese unverschlüsselten Zwischenstände helfen während der Stunde; beim geprüften IServ-Abschluss werden sie mitgelöscht.</p><div class="snapshot-create"><input id="snapshot-name" placeholder="z. B. 7a · Stunde 1"><button class="btn btn-primary" id="snapshot-save">Zwischenstand</button></div><div id="snapshot-list" class="snapshot-list"></div></section>
+    </div>
+    <section class="dashboard-card iserv-card" aria-labelledby="iserv-title">
+      <header class="card-title">
+        <div><span class="eyebrow">Verschlüsselte Langzeitsicherung</span><h2 id="iserv-title">Schul-IServ</h2></div>
+        <span class="iserv-status-badge is-off" id="iserv-status">Nicht konfiguriert</span>
+      </header>
+      <p class="muted">Der Server verschlüsselt den vollständigen Sitzungssnapshot vor der Übertragung. Zugangsdaten und Schlüssel verlassen das Backend nicht.</p>
+      <div class="iserv-security-note"><strong>AES-256-GCM</strong><span>IServ erhält ausschließlich verschlüsselte <code>.iabackup</code>-Dateien. Nach dem Upload wird die Datei zur Kontrolle zurückgelesen; nur danach werden temporäre Schülerdaten und Zwischenstände auf dem App-Server gelöscht.</span></div>
+      <div class="iserv-controls">
+        <label><span>Sicherungsname</span><input id="iserv-backup-name" maxlength="80" placeholder="z. B. 7a · Laborgeräte · Stunde 1"></label>
+        <div class="iserv-button-row">
+          <button class="btn btn-outline" id="iserv-test" type="button" disabled>Verbindung testen</button>
+          <button class="btn btn-primary" id="iserv-save" type="button" disabled>Auf IServ archivieren &amp; Serverdaten löschen</button>
+          <button class="btn btn-quiet" id="iserv-refresh" type="button" disabled>Sicherungen aktualisieren</button>
+        </div>
+      </div>
+      <div class="iserv-config-note" id="iserv-config-note" role="status">Trage zunächst die IServ-Variablen serverseitig ein.</div>
+      <div class="iserv-backup-list" id="iserv-backup-list"><p class="empty-state">Noch keine IServ-Sicherungen geladen.</p></div>
+    </section>
+    <section class="dashboard-card"><header class="card-title"><div><span class="eyebrow">Klassenübersicht</span><h2>Lernende</h2></div><button class="btn btn-danger-outline" id="reset-session">Alle aktuellen Aktivitäten löschen</button></header><div class="table-wrap"><table><thead><tr><th>Status</th><th>Pseudonym</th><th>Klasse</th><th>Fortschritt</th><th>Antworten</th><th>Automatisch gesichert</th><th>Letzte Aktivität</th><th>Aktionen</th></tr></thead><tbody id="student-table"><tr><td colspan="8" class="empty-state">Noch niemand angemeldet.</td></tr></tbody></table></div></section>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

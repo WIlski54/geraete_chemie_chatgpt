@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ student.pseudonym }} · Detail</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260822a') }}">
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
+  <script>window.STUDENT_ID={{ student.id|tojson }}; window.TEACHER_TOKEN={{ teacher_action_token|tojson }};</script>
+  <script src="{{ url_for('static', filename='js/detail.js', v='20260820a') }}" defer></script>
+</head>
+<body class="dashboard-page">
+  <header class="dashboard-header"><div class="dashboard-brand"><img src="{{ url_for('static', filename='img/logo-gsm-transparent.png') }}" alt="GSM"><div><span class="eyebrow light">Schülerdetail</span><h1>{{ student.pseudonym }} · Klasse {{ student.klasse }}</h1></div></div><a class="btn btn-ghost-light" href="{{ url_for('dashboard') }}">← Dashboard</a></header>
+  <main class="dashboard-main detail-grid">
+    <section class="dashboard-card"><header class="card-title"><div><span class="eyebrow">Live-Protokoll</span><h2>Antwortversuche</h2></div></header><div id="answer-log" class="answer-log">
+      {% for answer in answers %}<article class="answer-log-item {{ 'is-correct' if answer.korrekt == 1 else 'is-wrong' if answer.korrekt == 0 else '' }}"><div><strong>Aufgabe {{ answer.aufgabe_nr }}</strong><span>{{ answer.antwort_typ }} · Niveau {{ answer.niveau }} · Versuch {{ answer.versuch_nr }}</span></div><p>{{ answer.antwort_text }}</p><time>{{ answer.erstellt_at }}</time></article>{% else %}<p class="empty-state" id="no-answers">Noch keine Antworten.</p>{% endfor %}
+    </div></section>
+    <section class="dashboard-card"><header class="card-title"><div><span class="eyebrow">KI-Transparenz</span><h2>Chatverlauf</h2></div></header><div id="detail-chat" class="detail-chat">
+      {% for chat in chats %}<div class="chat-message {{ 'assistant' if chat.role == 'assistant' else 'user' }}"><strong>{{ 'KI' if chat.role == 'assistant' else student.pseudonym }}</strong><p>{{ chat.message }}</p><time>{{ chat.created_at }}</time></div>{% else %}<p class="empty-state">Noch kein KI-Chat.</p>{% endfor %}
+    </div><div class="detail-actions"><button class="btn btn-outline" id="toggle-ai">KI sperren / freigeben</button><button class="btn btn-danger-outline" id="delete-student">Daten dieses Pseudonyms löschen</button></div></section>
+    <section class="dashboard-card drawing-gallery-card"><header class="card-title"><div><span class="eyebrow">Zeichenlabor</span><h2>Gespeicherte Objektzeichnungen</h2></div><span class="count-badge">{{ drawings|length }}</span></header><div class="teacher-drawing-gallery">
+      {% for drawing in drawings %}<article class="teacher-drawing-item"><img src="{{ drawing.preview_data }}" alt="Zeichnung: {{ drawing.geraet }}" loading="lazy"><div><strong>{{ drawing.geraet }}</strong><span>{{ drawing.object_count }} editierbare Objekte</span><time>{{ drawing.updated_at }}</time></div></article>{% else %}<p class="empty-state">Noch keine Zeichnung im Dashboard gespeichert.</p>{% endfor %}
+    </div></section>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

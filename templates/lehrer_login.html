@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Laborgeräte · Lehrerbereich</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260822a') }}">
+</head>
+<body class="login-page teacher-login-page">
+  <main class="compact-login-card">
+    <img src="{{ url_for('static', filename='img/logo-gsm-transparent.png') }}" alt="Gesamtschule Meiderich" class="compact-logo">
+    <span class="eyebrow">Lehrerbereich</span>
+    <h1>Laborgeräte · Live-Dashboard</h1>
+    <p class="muted">Freigaben, Lernfortschritt und Sitzungen verwalten.</p>
+    {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
+    <form method="post" class="stack-lg">
+      <label class="field-label" for="passwort">Passwort</label>
+      <input id="passwort" type="password" name="passwort" required autofocus>
+      <button class="btn btn-primary btn-wide" type="submit">Dashboard öffnen</button>
+    </form>
+    <a class="back-link" href="{{ url_for('login') }}">← Zur Schüleranmeldung</a>
+  </main>
+</body>
+</html>
