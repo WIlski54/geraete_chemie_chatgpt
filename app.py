@@ -48,8 +48,9 @@ app.secret_key = os.environ.get("SECRET_KEY", "change-this-before-deployment")
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE", "0") == "1",
 )
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+socketio = SocketIO(app, async_mode="threading")
 
 AI_CLIENT = genai.Client(api_key=GEMINI_API_KEY) if genai and GEMINI_API_KEY else None
 
@@ -632,6 +633,16 @@ def iserv_error_response(exc: IservBackupError, **extra):
 @app.route("/")
 def root():
     return redirect(url_for("schueler") if session.get("schueler_id") else url_for("login"))
+
+
+@app.get("/health")
+def health():
+    try:
+        with get_db() as db:
+            db.execute("SELECT 1").fetchone()
+        return jsonify({"ok": True, "app_id": APP_ID})
+    except sqlite3.DatabaseError:
+        return jsonify({"ok": False}), 503
 
 
 @app.route("/login", methods=["GET", "POST"])

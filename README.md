@@ -111,3 +111,18 @@ Lehrer-Dashboard.
 ## Deployment
 
 Der enthaltene `Dockerfile` startet genau einen Gunicorn-/Eventlet-Worker, damit Socket.IO-Verbindungen stabil bleiben. Den Ordner `data/` als persistenten Speicher mounten.
+
+### Coolify
+
+- Quelle: Git-Repository, Build Pack `Dockerfile`
+- Branch: `main`
+- Base Directory: `/`
+- Dockerfile Location: `/Dockerfile`
+- interner Port: `5000`
+- Healthcheck: `/health`
+- persistentes Volume: Zielpfad `/app/data`
+- `SESSION_COOKIE_SECURE=1`, sobald die Anwendung ausschließlich per HTTPS erreichbar ist
+
+Alle Werte aus `.env.example` werden in Coolify unter **Environment Variables**
+gesetzt. Echte Passwörter, API-Schlüssel und der IServ-Verschlüsselungsschlüssel
+gehören nur dort hinein und niemals in das Repository oder in Build Arguments.
