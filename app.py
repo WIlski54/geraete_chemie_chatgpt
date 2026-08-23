@@ -97,6 +97,9 @@ MAX_DRAWING_JSON_BYTES = 500_000
 MAX_DRAWING_PREVIEW_CHARS = 1_500_000
 MAX_WORKSPACE_STATE_BYTES = 4_000_000
 AUTOSAVE_FLUSH_TIMEOUT_SECONDS = 2.5
+AI_REQUEST_TYPES = {"chat", "korrektur", "zeichnung", "handschrift"}
+CONTINUATION_STATE_ID = 1
+AI_GROUP_STATE_ID = 1
 
 
 def now_iso() -> str:
@@ -105,6 +108,10 @@ def now_iso() -> str:
 
 def hash_resume_token(token: str) -> str:
     return hashlib.sha256(f"{APP_ID}:{token}".encode("utf-8")).hexdigest()
+
+
+def normalized_identity(value: str) -> str:
+    return " ".join(str(value).strip().casefold().split())
 
 
 @contextmanager
@@ -161,7 +168,8 @@ def init_db() -> None:
                 status TEXT NOT NULL DEFAULT 'wartend',
                 token_count INTEGER NOT NULL DEFAULT 0,
                 erstellt_at TEXT NOT NULL,
-                bearbeitet_at TEXT
+                bearbeitet_at TEXT,
+                grant_mode TEXT NOT NULL DEFAULT 'einzel'
             );
             CREATE TABLE IF NOT EXISTS chat_messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -197,6 +205,39 @@ def init_db() -> None:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS fortsetzungsstatus (
+                id INTEGER PRIMARY KEY CHECK (id=1),
+                active INTEGER NOT NULL DEFAULT 0,
+                source_name TEXT,
+                started_at TEXT
+            );
+            CREATE TABLE IF NOT EXISTS fortsetzungsziele (
+                student_id TEXT PRIMARY KEY,
+                status TEXT NOT NULL DEFAULT 'verfuegbar'
+            );
+            CREATE TABLE IF NOT EXISTS fortsetzungsanfragen (
+                id TEXT PRIMARY KEY,
+                new_student_id TEXT NOT NULL,
+                pseudonym TEXT NOT NULL,
+                klasse TEXT NOT NULL,
+                resume_token_hash TEXT NOT NULL,
+                target_student_id TEXT,
+                status TEXT NOT NULL DEFAULT 'wartend',
+                created_at TEXT NOT NULL,
+                decided_at TEXT
+            );
+            CREATE TABLE IF NOT EXISTS ki_gruppenfreigabe (
+                id INTEGER PRIMARY KEY CHECK (id=1),
+                active INTEGER NOT NULL DEFAULT 0,
+                locked INTEGER NOT NULL DEFAULT 0,
+                klasse TEXT NOT NULL DEFAULT '',
+                allowed_types TEXT NOT NULL DEFAULT '[]',
+                starts_at TEXT,
+                expires_at TEXT,
+                token_limit INTEGER NOT NULL DEFAULT 0,
+                tokens_used INTEGER NOT NULL DEFAULT 0,
+                per_student_limit INTEGER NOT NULL DEFAULT 0
+            );
             """
         )
         student_columns = {
@@ -204,6 +245,28 @@ def init_db() -> None:
         }
         if "resume_token_hash" not in student_columns:
             db.execute("ALTER TABLE schueler ADD COLUMN resume_token_hash TEXT")
+        ai_request_columns = {
+            row["name"] for row in db.execute("PRAGMA table_info(ki_anfragen)").fetchall()
+        }
+        if "grant_mode" not in ai_request_columns:
+            db.execute(
+                "ALTER TABLE ki_anfragen ADD COLUMN grant_mode TEXT NOT NULL DEFAULT 'einzel'"
+            )
+        ai_group_columns = {
+            row["name"] for row in db.execute("PRAGMA table_info(ki_gruppenfreigabe)").fetchall()
+        }
+        if "locked" not in ai_group_columns:
+            db.execute(
+                "ALTER TABLE ki_gruppenfreigabe ADD COLUMN locked INTEGER NOT NULL DEFAULT 0"
+            )
+        db.execute(
+            "INSERT OR IGNORE INTO fortsetzungsstatus(id,active) VALUES (?,0)",
+            (CONTINUATION_STATE_ID,),
+        )
+        db.execute(
+            "INSERT OR IGNORE INTO ki_gruppenfreigabe(id,active) VALUES (?,0)",
+            (AI_GROUP_STATE_ID,),
+        )
         # Socket-IDs belong to one running server process. After a restart they
         # are necessarily stale and must never make old pupils appear online.
         db.execute("UPDATE schueler SET socket_id=NULL")
@@ -336,15 +399,166 @@ def add_tokens(count: int) -> None:
         db.commit()
 
 
+def response_token_count(response, fallback_text: str) -> int:
+    usage = getattr(response, "usage_metadata", None)
+    actual = getattr(usage, "total_token_count", None) if usage else None
+    try:
+        return max(1, int(actual)) if actual is not None else estimate_tokens(fallback_text)
+    except (TypeError, ValueError):
+        return estimate_tokens(fallback_text)
+
+
+def ai_group_status(student_id: str | None = None, request_type: str | None = None) -> dict:
+    now = dt.datetime.now()
+    with get_db() as db:
+        row = db.execute(
+            "SELECT * FROM ki_gruppenfreigabe WHERE id=?", (AI_GROUP_STATE_ID,)
+        ).fetchone()
+        if not row:
+            return {"active": False, "allowed": False, "reason": "Keine Gruppenfreigabe."}
+        state = dict(row)
+        expires_at = None
+        try:
+            expires_at = dt.datetime.fromisoformat(state.get("expires_at") or "")
+        except ValueError:
+            pass
+        was_active = bool(state.get("active"))
+        token_limit = int(state.get("token_limit") or 0)
+        exhausted = bool(
+            was_active
+            and token_limit > 0
+            and int(state.get("tokens_used") or 0) >= token_limit
+        )
+        daily_exhausted = get_today_tokens() >= DAILY_TOKEN_LIMIT
+        expired = bool(was_active and expires_at and expires_at <= now)
+        if was_active and (expired or exhausted or daily_exhausted):
+            db.execute(
+                "UPDATE ki_gruppenfreigabe SET active=0 WHERE id=?",
+                (AI_GROUP_STATE_ID,),
+            )
+            db.commit()
+            state["active"] = 0
+        allowed_types = []
+        try:
+            allowed_types = json.loads(state.get("allowed_types") or "[]")
+        except json.JSONDecodeError:
+            allowed_types = []
+        state["allowed_types"] = [
+            item for item in allowed_types if item in AI_REQUEST_TYPES
+        ]
+        state["active"] = bool(state.get("active"))
+        state["locked"] = bool(state.get("locked"))
+        state["remaining_tokens"] = max(
+            0, int(state.get("token_limit") or 0) - int(state.get("tokens_used") or 0)
+        )
+        state["daily_tokens"] = get_today_tokens()
+        state["daily_limit"] = DAILY_TOKEN_LIMIT
+        state["allowed"] = state["active"]
+        state["reason"] = ""
+        if not state["active"]:
+            state["allowed"] = False
+            if daily_exhausted:
+                state["reason"] = "Das KI-Tagesbudget ist erreicht."
+            elif expired or exhausted:
+                state["reason"] = "Die Gruppenfreigabe ist abgelaufen oder ihr Budget ist erreicht. Einzelanfragen sind wieder möglich."
+            else:
+                state["reason"] = "Einzelanfragen sind aktiv; eine Gruppenfreigabe läuft nicht."
+            return state
+        if request_type and request_type not in state["allowed_types"]:
+            state["allowed"] = False
+            state["reason"] = "Diese KI-Funktion ist für die Gruppe nicht freigegeben."
+            return state
+        if student_id:
+            student = db.execute(
+                "SELECT klasse FROM schueler WHERE id=?", (student_id,)
+            ).fetchone()
+            if not student:
+                state["allowed"] = False
+                state["reason"] = "Der Lernplatz wurde nicht gefunden."
+                return state
+            if state.get("klasse") and normalized_identity(student["klasse"]) != normalized_identity(
+                state["klasse"]
+            ):
+                state["allowed"] = False
+                state["reason"] = "Die Gruppenfreigabe gilt für eine andere Klasse."
+                return state
+            usage = db.execute(
+                """SELECT COALESCE(SUM(token_count),0) AS used
+                   FROM ki_anfragen
+                   WHERE schueler_id=? AND grant_mode='gruppe' AND erstellt_at>=?""",
+                (student_id, state.get("starts_at") or ""),
+            ).fetchone()
+            state["student_tokens"] = int(usage["used"] if usage else 0)
+            if state["student_tokens"] >= int(state.get("per_student_limit") or 0):
+                state["allowed"] = False
+                state["reason"] = "Dein persönliches KI-Budget für diese Freigabe ist erreicht."
+        return state
+
+
+def ai_group_lock_applies(student_id: str) -> bool:
+    with get_db() as db:
+        state = db.execute(
+            "SELECT locked,klasse FROM ki_gruppenfreigabe WHERE id=?",
+            (AI_GROUP_STATE_ID,),
+        ).fetchone()
+        if not state or not state["locked"]:
+            return False
+        student = db.execute(
+            "SELECT klasse FROM schueler WHERE id=?", (student_id,)
+        ).fetchone()
+    return bool(
+        student
+        and (
+            not state["klasse"]
+            or normalized_identity(student["klasse"]) == normalized_identity(state["klasse"])
+        )
+    )
+
+
+def record_ai_tokens(count: int, request_id, student_id: str) -> dict:
+    token_count = max(0, int(count))
+    today = dt.date.today().isoformat()
+    with get_db() as db:
+        db.execute(
+            """INSERT INTO token_budget(datum,tokens_used) VALUES (?,?)
+               ON CONFLICT(datum) DO UPDATE SET tokens_used=tokens_used+excluded.tokens_used""",
+            (today, token_count),
+        )
+        request_row = db.execute(
+            "SELECT grant_mode FROM ki_anfragen WHERE id=? AND schueler_id=?",
+            (request_id, student_id),
+        ).fetchone()
+        db.execute(
+            "UPDATE ki_anfragen SET token_count=token_count+? WHERE id=? AND schueler_id=?",
+            (token_count, request_id, student_id),
+        )
+        if request_row and request_row["grant_mode"] == "gruppe":
+            db.execute(
+                "UPDATE ki_gruppenfreigabe SET tokens_used=tokens_used+? WHERE id=?",
+                (token_count, AI_GROUP_STATE_ID),
+            )
+        db.commit()
+    return ai_group_status()
+
+
 def ensure_ai_request(request_id, request_type: str, student_id: str):
+    if (
+        student_id in ki_blocked_students
+        or ai_group_lock_applies(student_id)
+        or get_today_tokens() >= DAILY_TOKEN_LIMIT
+    ):
+        return None
     if not request_id:
         return None
     with get_db() as db:
-        return db.execute(
+        row = db.execute(
             """SELECT * FROM ki_anfragen
                WHERE id=? AND typ=? AND schueler_id=? AND status='freigegeben'""",
             (request_id, request_type, student_id),
         ).fetchone()
+    if row and row["grant_mode"] == "gruppe":
+        return row if ai_group_status(student_id, request_type)["allowed"] else None
+    return row
 
 
 def generate_ai(contents, system_instruction: str | None = None):
@@ -428,6 +642,7 @@ SNAPSHOT_COLUMNS = {
         "token_count",
         "erstellt_at",
         "bearbeitet_at",
+        "grant_mode",
     ],
     "chat_messages": [
         "id",
@@ -455,13 +670,16 @@ SNAPSHOT_COLUMNS = {
 }
 
 
-def capture_live_snapshot(db: sqlite3.Connection) -> dict:
+def capture_live_snapshot(
+    db: sqlite3.Connection, *, preserve_resume_tokens: bool = False
+) -> dict:
     snapshot = {table: table_rows(db, table) for table in LIVE_TABLES}
-    # Presence is runtime state, not classroom data. Never persist live socket
-    # identifiers locally or in an encrypted IServ snapshot.
+    # Presence is runtime state. Resume hashes are preserved only for the
+    # encrypted IServ continuation archive, never for ordinary local snapshots.
     for student in snapshot["schueler"]:
         student["socket_id"] = None
-        student["resume_token_hash"] = None
+        if not preserve_resume_tokens:
+            student["resume_token_hash"] = None
     return snapshot
 
 
@@ -485,15 +703,14 @@ def validate_live_snapshot(snapshot: dict) -> dict:
                 raise ValueError(f"Ein Datensatz in {table} ist unvollständig.")
             compatible_row = dict(row)
             if table == "schueler":
-                # Backups from before automatic session resume did not yet
-                # contain this runtime-only field.
                 compatible_row.setdefault("resume_token_hash", None)
+            if table == "ki_anfragen":
+                compatible_row.setdefault("grant_mode", "einzel")
             if set(compatible_row) != expected:
                 raise ValueError(f"Ein Datensatz in {table} ist unvollständig.")
             clean = {column: compatible_row[column] for column in columns}
             if table == "schueler":
                 clean["socket_id"] = None
-                clean["resume_token_hash"] = None
             clean_rows.append(clean)
         normalized[table] = clean_rows
     return normalized
@@ -535,6 +752,127 @@ def restore_live_snapshot(db: sqlite3.Connection, snapshot: dict) -> None:
         raise
 
 
+def set_continuation_mode(
+    db: sqlite3.Connection, *, active: bool, source_name: str = ""
+) -> None:
+    db.execute("DELETE FROM fortsetzungsziele")
+    db.execute("DELETE FROM fortsetzungsanfragen")
+    db.execute(
+        """INSERT INTO fortsetzungsstatus(id,active,source_name,started_at)
+           VALUES (?,?,?,?)
+           ON CONFLICT(id) DO UPDATE SET
+             active=excluded.active,source_name=excluded.source_name,started_at=excluded.started_at""",
+        (
+            CONTINUATION_STATE_ID,
+            int(active),
+            str(source_name).strip()[:80] if active else "",
+            now_iso() if active else None,
+        ),
+    )
+    if active:
+        db.execute(
+            "INSERT INTO fortsetzungsziele(student_id,status) SELECT id,'verfuegbar' FROM schueler"
+        )
+    db.commit()
+
+
+def continuation_is_active(db: sqlite3.Connection) -> bool:
+    row = db.execute(
+        "SELECT active FROM fortsetzungsstatus WHERE id=?", (CONTINUATION_STATE_ID,)
+    ).fetchone()
+    return bool(row and row["active"])
+
+
+def continuation_candidates(
+    db: sqlite3.Connection, pseudonym: str, klasse: str
+) -> list[dict]:
+    rows = db.execute(
+        """SELECT s.id,s.pseudonym,s.klasse,
+                  (SELECT COUNT(*) FROM fortschritt f WHERE f.schueler_id=s.id) AS progress_count,
+                  (SELECT COUNT(*) FROM antworten a WHERE a.schueler_id=s.id) AS answer_count
+           FROM fortsetzungsziele z
+           JOIN schueler s ON s.id=z.student_id
+           WHERE z.status='verfuegbar'"""
+    ).fetchall()
+    wanted_name = normalized_identity(pseudonym)
+    wanted_class = normalized_identity(klasse)
+    return [
+        dict(row)
+        for row in rows
+        if normalized_identity(row["pseudonym"]) == wanted_name
+        and normalized_identity(row["klasse"]) == wanted_class
+    ]
+
+
+def continuation_dashboard_state(db: sqlite3.Connection) -> dict:
+    state_row = db.execute(
+        "SELECT active,source_name,started_at FROM fortsetzungsstatus WHERE id=?",
+        (CONTINUATION_STATE_ID,),
+    ).fetchone()
+    state = dict(state_row) if state_row else {"active": 0}
+    target_counts = {
+        row["status"]: int(row["n"])
+        for row in db.execute(
+            "SELECT status,COUNT(*) AS n FROM fortsetzungsziele GROUP BY status"
+        ).fetchall()
+    }
+    waiting = [
+        dict(row)
+        for row in db.execute(
+            """SELECT id,pseudonym,klasse,target_student_id,status,created_at
+               FROM fortsetzungsanfragen WHERE status='wartend' ORDER BY created_at"""
+        ).fetchall()
+    ]
+    target_frequency: dict[str, int] = {}
+    for item in waiting:
+        candidates = continuation_candidates(db, item["pseudonym"], item["klasse"])
+        item["candidates"] = candidates
+        item["target_student_id"] = candidates[0]["id"] if len(candidates) == 1 else None
+        if item["target_student_id"]:
+            target_frequency[item["target_student_id"]] = (
+                target_frequency.get(item["target_student_id"], 0) + 1
+            )
+    for item in waiting:
+        target = item.get("target_student_id")
+        item["unique"] = bool(target and target_frequency.get(target) == 1)
+    state.update(
+        {
+            "active": bool(state.get("active")),
+            "targets_total": sum(target_counts.values()),
+            "targets_claimed": target_counts.get("verbunden", 0),
+            "targets_available": target_counts.get("verfuegbar", 0),
+            "requests": waiting,
+            "unique_count": sum(1 for item in waiting if item["unique"]),
+        }
+    )
+    return state
+
+
+def approve_continuation_request(
+    db: sqlite3.Connection, request_row: sqlite3.Row, target_student_id: str
+) -> None:
+    target = db.execute(
+        """SELECT s.id FROM fortsetzungsziele z JOIN schueler s ON s.id=z.student_id
+           WHERE z.student_id=? AND z.status='verfuegbar'""",
+        (target_student_id,),
+    ).fetchone()
+    if not target:
+        raise ValueError("Dieser Arbeitsstand ist bereits vergeben oder nicht verfügbar.")
+    db.execute(
+        "UPDATE schueler SET resume_token_hash=?,last_active=? WHERE id=?",
+        (request_row["resume_token_hash"], now_iso(), target_student_id),
+    )
+    db.execute(
+        "UPDATE fortsetzungsziele SET status='verbunden' WHERE student_id=?",
+        (target_student_id,),
+    )
+    db.execute(
+        """UPDATE fortsetzungsanfragen
+           SET target_student_id=?,status='freigegeben',decided_at=? WHERE id=?""",
+        (target_student_id, now_iso(), request_row["id"]),
+    )
+
+
 def snapshot_summary(snapshot: dict) -> dict:
     validated = validate_live_snapshot(snapshot)
     return {
@@ -560,6 +898,8 @@ def snapshot_digest(snapshot: dict) -> str:
 
 
 STUDENT_DATA_TABLES = [
+    "fortsetzungsanfragen",
+    "fortsetzungsziele",
     "fortschritt",
     "antworten",
     "ki_anfragen",
@@ -582,6 +922,14 @@ def purge_classroom_data(*, delete_local_snapshots: bool = True) -> dict:
         }
         for table in STUDENT_DATA_TABLES:
             db.execute(f"DELETE FROM {table}")
+        db.execute(
+            "UPDATE fortsetzungsstatus SET active=0,source_name='',started_at=NULL WHERE id=?",
+            (CONTINUATION_STATE_ID,),
+        )
+        db.execute(
+            "UPDATE ki_gruppenfreigabe SET active=0,locked=0 WHERE id=?",
+            (AI_GROUP_STATE_ID,),
+        )
         local_snapshot_count = 0
         if delete_local_snapshots:
             local_snapshot_count = int(
@@ -665,6 +1013,29 @@ def login():
             resume_token = secrets.token_urlsafe(32)
             joined = now_iso()
             with get_db() as db:
+                if continuation_is_active(db):
+                    candidates = continuation_candidates(db, pseudonym, klasse)
+                    request_id = uuid.uuid4().hex[:20]
+                    db.execute(
+                        """INSERT INTO fortsetzungsanfragen
+                           (id,new_student_id,pseudonym,klasse,resume_token_hash,target_student_id,status,created_at)
+                           VALUES (?,?,?,?,?,?,?,?)""",
+                        (
+                            request_id,
+                            sid,
+                            pseudonym,
+                            klasse,
+                            hash_resume_token(resume_token),
+                            candidates[0]["id"] if len(candidates) == 1 else None,
+                            "wartend",
+                            joined,
+                        ),
+                    )
+                    db.commit()
+                    session["continuation_request_id"] = request_id
+                    session["continuation_resume_token"] = resume_token
+                    socketio.emit("fortsetzung_update", {}, to="lehrer_room")
+                    return redirect(url_for("continuation_waiting"))
                 db.execute(
                     "INSERT INTO schueler(id,pseudonym,klasse,joined_at,last_active,resume_token_hash) VALUES (?,?,?,?,?,?)",
                     (sid, pseudonym, klasse, joined, joined, hash_resume_token(resume_token)),
@@ -689,6 +1060,85 @@ def login():
     return render_template("login.html", error=error, app_id=APP_ID)
 
 
+@app.get("/fortsetzung/warten")
+def continuation_waiting():
+    request_id = session.get("continuation_request_id")
+    if not request_id:
+        return redirect(url_for("login"))
+    with get_db() as db:
+        row = db.execute(
+            "SELECT pseudonym,klasse,status FROM fortsetzungsanfragen WHERE id=?",
+            (request_id,),
+        ).fetchone()
+    if not row:
+        session.pop("continuation_request_id", None)
+        session.pop("continuation_resume_token", None)
+        return redirect(url_for("login"))
+    return render_template(
+        "fortsetzung_warten.html",
+        pseudonym=row["pseudonym"],
+        klasse=row["klasse"],
+    )
+
+
+@app.post("/api/fortsetzung/status")
+def continuation_request_status():
+    request_id = session.get("continuation_request_id")
+    if not request_id:
+        return jsonify({"ok": False, "error": "Keine Fortsetzungsanfrage."}), 404
+    with get_db() as db:
+        row = db.execute(
+            "SELECT * FROM fortsetzungsanfragen WHERE id=?", (request_id,)
+        ).fetchone()
+    if not row:
+        return jsonify({"ok": False, "error": "Fortsetzungsanfrage nicht gefunden."}), 404
+    if row["status"] == "wartend":
+        return jsonify({"ok": True, "status": "wartend"})
+    if row["status"] == "abgelehnt":
+        session.pop("continuation_request_id", None)
+        session.pop("continuation_resume_token", None)
+        return jsonify({"ok": True, "status": "abgelehnt"})
+    if row["status"] != "freigegeben" or not row["target_student_id"]:
+        return jsonify({"ok": False, "error": "Fortsetzung ist unvollständig."}), 409
+    resume_token = session.get("continuation_resume_token", "")
+    if not resume_token or not secrets.compare_digest(
+        row["resume_token_hash"], hash_resume_token(resume_token)
+    ):
+        return jsonify({"ok": False, "error": "Fortsetzungstoken ungültig."}), 401
+    with get_db() as db:
+        student = db.execute(
+            "SELECT id,pseudonym,klasse FROM schueler WHERE id=?",
+            (row["target_student_id"],),
+        ).fetchone()
+    if not student:
+        return jsonify({"ok": False, "error": "Arbeitsstand nicht gefunden."}), 404
+    session["schueler_id"] = student["id"]
+    session["pseudonym"] = student["pseudonym"]
+    session["klasse"] = student["klasse"]
+    session["resume_token"] = resume_token
+    session.pop("continuation_request_id", None)
+    session.pop("continuation_resume_token", None)
+    return jsonify(
+        {"ok": True, "status": "freigegeben", "redirect": url_for("schueler")}
+    )
+
+
+@app.post("/fortsetzung/abbrechen")
+def cancel_continuation_request():
+    request_id = session.pop("continuation_request_id", None)
+    session.pop("continuation_resume_token", None)
+    if request_id:
+        with get_db() as db:
+            db.execute(
+                """UPDATE fortsetzungsanfragen SET status='abgelehnt',decided_at=?
+                   WHERE id=? AND status='wartend'""",
+                (now_iso(), request_id),
+            )
+            db.commit()
+        socketio.emit("fortsetzung_update", {}, to="lehrer_room")
+    return redirect(url_for("login"))
+
+
 @app.post("/api/resume")
 def resume_student_session():
     data = request.get_json(silent=True) or {}
@@ -701,18 +1151,30 @@ def resume_student_session():
             "SELECT id,pseudonym,klasse,resume_token_hash FROM schueler WHERE id=?",
             (student_id,),
         ).fetchone()
-    if (
-        not student
-        or not student["resume_token_hash"]
-        or not secrets.compare_digest(
-            student["resume_token_hash"], hash_resume_token(token)
-        )
+    if not student:
+        return jsonify(
+            {
+                "ok": False,
+                "pending_restore": True,
+                "message": "Dein früherer Arbeitsstand ist derzeit nicht als Fortsetzungsstunde geladen.",
+            }
+        ), 409
+    if not student["resume_token_hash"] or not secrets.compare_digest(
+        student["resume_token_hash"], hash_resume_token(token)
     ):
         return jsonify({"ok": False, "expired": True}), 401
     session["schueler_id"] = student["id"]
     session["pseudonym"] = student["pseudonym"]
     session["klasse"] = student["klasse"]
     session["resume_token"] = token
+    with get_db() as db:
+        if continuation_is_active(db):
+            db.execute(
+                "UPDATE fortsetzungsziele SET status='verbunden' WHERE student_id=?",
+                (student["id"],),
+            )
+            db.commit()
+            socketio.emit("fortsetzung_update", {}, to="lehrer_room")
     return jsonify({"ok": True, "redirect": url_for("schueler")})
 
 
@@ -1071,6 +1533,43 @@ def delete_student_drawing(device):
     return jsonify({"ok": True, "device": device, "deleted": True})
 
 
+@app.post("/api/ki-zugang")
+@schueler_required
+def check_ai_group_access():
+    data = request.get_json(silent=True) or {}
+    request_type = str(data.get("typ", ""))[:30]
+    if request_type not in AI_REQUEST_TYPES:
+        return jsonify({"status": "invalid_type"}), 400
+    sid = session["schueler_id"]
+    if sid in ki_blocked_students or ai_group_lock_applies(sid):
+        return jsonify(
+            {"status": "blocked", "message": "Der KI-Zugang ist für deinen Lernplatz gesperrt."}
+        )
+    group = ai_group_status(sid, request_type)
+    if not group["allowed"]:
+        return jsonify({"status": "einzelanfrage", "reason": group.get("reason", "")})
+    context = str(data.get("kontext", ""))[:300]
+    created = now_iso()
+    with get_db() as db:
+        cur = db.execute(
+            """INSERT INTO ki_anfragen
+               (schueler_id,typ,kontext,status,erstellt_at,bearbeitet_at,grant_mode)
+               VALUES (?,?,?,?,?,?,?)""",
+            (sid, request_type, context, "freigegeben", created, created, "gruppe"),
+        )
+        db.commit()
+        request_id = cur.lastrowid
+    return jsonify(
+        {
+            "status": "freigegeben",
+            "anfrage_id": request_id,
+            "mode": "gruppe",
+            "expires_at": group.get("expires_at"),
+            "remaining_tokens": group.get("remaining_tokens", 0),
+        }
+    )
+
+
 @app.post("/api/ki-anfrage")
 @schueler_required
 def request_ai_access():
@@ -1078,15 +1577,18 @@ def request_ai_access():
         return jsonify({"status": "budget_exceeded"})
     data = request.get_json(silent=True) or {}
     request_type = str(data.get("typ", "chat"))[:30]
-    if request_type not in {"chat", "korrektur", "zeichnung", "handschrift"}:
+    if request_type not in AI_REQUEST_TYPES:
         return jsonify({"status": "invalid_type"}), 400
     sid = session["schueler_id"]
+    if sid in ki_blocked_students or ai_group_lock_applies(sid):
+        return jsonify({"status": "blocked", "message": "Der KI-Zugang ist gesperrt."})
     context = str(data.get("kontext", ""))[:300]
     created = now_iso()
     with get_db() as db:
         cur = db.execute(
-            "INSERT INTO ki_anfragen(schueler_id,typ,kontext,erstellt_at) VALUES (?,?,?,?)",
-            (sid, request_type, context, created),
+            """INSERT INTO ki_anfragen(schueler_id,typ,kontext,erstellt_at,grant_mode)
+               VALUES (?,?,?,?,?)""",
+            (sid, request_type, context, created, "einzel"),
         )
         db.commit()
         request_id = cur.lastrowid
@@ -1104,6 +1606,148 @@ def request_ai_access():
         to="lehrer_room",
     )
     return jsonify({"status": "wartend", "anfrage_id": request_id})
+
+
+@app.post("/api/lehrer/ki-gruppe")
+@teacher_api_required
+def control_ai_group():
+    data = request.get_json(silent=True) or {}
+    action = str(data.get("action", ""))
+    if action not in {"grant", "lock"}:
+        return jsonify({"ok": False, "error": "Unbekannte KI-Gruppenaktion."}), 400
+    with get_db() as db:
+        previous = db.execute(
+            "SELECT * FROM ki_gruppenfreigabe WHERE id=?", (AI_GROUP_STATE_ID,)
+        ).fetchone()
+        scope_class = str((previous["klasse"] if previous else "") or "")
+        if action == "lock":
+            db.execute(
+                "UPDATE ki_gruppenfreigabe SET active=0,locked=1 WHERE id=?",
+                (AI_GROUP_STATE_ID,),
+            )
+            students = db.execute("SELECT id,klasse FROM schueler").fetchall()
+            affected = [
+                row["id"]
+                for row in students
+                if not scope_class
+                or normalized_identity(row["klasse"]) == normalized_identity(scope_class)
+            ]
+            ki_blocked_students.update(affected)
+            waiting = db.execute(
+                """SELECT k.id,k.schueler_id,k.typ,s.klasse FROM ki_anfragen k
+                   JOIN schueler s ON s.id=k.schueler_id WHERE k.status='wartend'"""
+            ).fetchall()
+            rejected = [
+                dict(row)
+                for row in waiting
+                if not scope_class
+                or normalized_identity(row["klasse"]) == normalized_identity(scope_class)
+            ]
+            for row in rejected:
+                db.execute(
+                    "UPDATE ki_anfragen SET status='abgelehnt',bearbeitet_at=? WHERE id=?",
+                    (now_iso(), row["id"]),
+                )
+            db.commit()
+            for student_id in affected:
+                socketio.emit(
+                    "ki_gesperrt", {"gesperrt": True, "gruppe": True}, to=f"schueler_{student_id}"
+                )
+            for row in rejected:
+                socketio.emit(
+                    "ki_entscheidung",
+                    {"id": row["id"], "entscheid": "abgelehnt", "typ": row["typ"]},
+                    to=f"schueler_{row['schueler_id']}",
+                )
+            socketio.emit("ki_gruppe_status", ai_group_status(), to="lehrer_room")
+            return jsonify(
+                {
+                    "ok": True,
+                    "action": "lock",
+                    "affected": len(affected),
+                    "rejected": len(rejected),
+                }
+            )
+
+        allowed_types = [
+            str(item) for item in (data.get("types") or []) if str(item) in AI_REQUEST_TYPES
+        ]
+        if not allowed_types:
+            return jsonify({"ok": False, "error": "Mindestens eine KI-Funktion auswählen."}), 400
+        try:
+            minutes = max(1, min(60, int(data.get("minutes", 10))))
+            requested_limit = max(100, int(data.get("token_limit", 5000)))
+            per_student_limit = max(100, int(data.get("per_student_limit", 1000)))
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "error": "Zeit und Tokenlimits müssen Zahlen sein."}), 400
+        remaining_daily = max(0, DAILY_TOKEN_LIMIT - get_today_tokens())
+        if remaining_daily <= 0:
+            return jsonify({"ok": False, "error": "Das KI-Tagesbudget ist bereits erreicht."}), 409
+        token_limit = min(requested_limit, remaining_daily)
+        per_student_limit = min(per_student_limit, token_limit)
+        scope_class = str(data.get("klasse", "")).strip()[:20]
+        starts = dt.datetime.now()
+        expires = starts + dt.timedelta(minutes=minutes)
+        db.execute(
+            """UPDATE ki_gruppenfreigabe SET active=1,locked=0,klasse=?,allowed_types=?,starts_at=?,
+               expires_at=?,token_limit=?,tokens_used=0,per_student_limit=? WHERE id=?""",
+            (
+                scope_class,
+                json.dumps(allowed_types),
+                starts.isoformat(timespec="seconds"),
+                expires.isoformat(timespec="seconds"),
+                token_limit,
+                per_student_limit,
+                AI_GROUP_STATE_ID,
+            ),
+        )
+        students = db.execute("SELECT id,klasse FROM schueler").fetchall()
+        affected = [
+            row["id"]
+            for row in students
+            if not scope_class
+            or normalized_identity(row["klasse"]) == normalized_identity(scope_class)
+        ]
+        for student_id in affected:
+            ki_blocked_students.discard(student_id)
+        pending = db.execute(
+            """SELECT k.id,k.schueler_id,k.typ,s.klasse FROM ki_anfragen k
+               JOIN schueler s ON s.id=k.schueler_id WHERE k.status='wartend'"""
+        ).fetchall()
+        auto_approved = []
+        for row in pending:
+            if row["typ"] not in allowed_types:
+                continue
+            if scope_class and normalized_identity(row["klasse"]) != normalized_identity(scope_class):
+                continue
+            db.execute(
+                """UPDATE ki_anfragen SET status='freigegeben',bearbeitet_at=?,grant_mode='gruppe'
+                   WHERE id=?""",
+                (now_iso(), row["id"]),
+            )
+            auto_approved.append(dict(row))
+        db.commit()
+    for student_id in affected:
+        socketio.emit(
+            "ki_gesperrt", {"gesperrt": False, "gruppe": True}, to=f"schueler_{student_id}"
+        )
+    for row in auto_approved:
+        socketio.emit(
+            "ki_entscheidung",
+            {"id": row["id"], "entscheid": "freigegeben", "typ": row["typ"]},
+            to=f"schueler_{row['schueler_id']}",
+        )
+    status = ai_group_status()
+    socketio.emit("ki_gruppe_status", status, to="lehrer_room")
+    return jsonify(
+        {
+            "ok": True,
+            "action": "grant",
+            "affected": len(affected),
+            "auto_approved": len(auto_approved),
+            "ai_group": status,
+        }
+    )
 
 
 @app.post("/api/ki-entscheidung")
@@ -1161,14 +1805,8 @@ def chat():
         transcript.append(f"Schüler: {message}")
         response = generate_ai("Bisheriger Dialog:\n" + "\n".join(transcript))
         reply = response.text
-        tokens = estimate_tokens(message + reply)
-        add_tokens(tokens)
-        with get_db() as db:
-            db.execute(
-                "UPDATE ki_anfragen SET token_count=token_count+? WHERE id=?",
-                (tokens, request_id),
-            )
-            db.commit()
+        tokens = response_token_count(response, message + reply)
+        group = record_ai_tokens(tokens, request_id, sid)
         log_chat(sid, request_id, "user", message)
         log_chat(sid, request_id, "assistant", reply)
         socketio.emit(
@@ -1185,7 +1823,7 @@ def chat():
         )
         socketio.emit(
             "token_update",
-            {"today": get_today_tokens(), "limit": DAILY_TOKEN_LIMIT},
+            {"today": get_today_tokens(), "limit": DAILY_TOKEN_LIMIT, "ai_group": group},
             to="lehrer_room",
         )
         return jsonify({"response": reply, "tokens": tokens})
@@ -1213,10 +1851,16 @@ Antworte ausschließlich als JSON: {{"correct": true|false|null, "feedback": "..
             {"correct": None, "feedback": "Die Antwort wurde gespeichert. Für KI-Feedback muss die Lehrkraft den Gemini-Schlüssel konfigurieren.", "hint": "Vergleiche deine Antwort mit der Geräteübersicht."}
         )
     try:
-        response = generate_ai(prompt, "Du bist eine einfühlsame Chemielehrkraft für Klasse 7.").text
-        result = parse_json_response(response)
-        tokens = estimate_tokens(prompt + response)
-        add_tokens(tokens)
+        response = generate_ai(prompt, "Du bist eine einfühlsame Chemielehrkraft für Klasse 7.")
+        response_text = response.text
+        result = parse_json_response(response_text)
+        tokens = response_token_count(response, prompt + response_text)
+        group = record_ai_tokens(tokens, request_id, sid)
+        socketio.emit(
+            "token_update",
+            {"today": get_today_tokens(), "limit": DAILY_TOKEN_LIMIT, "ai_group": group},
+            to="lehrer_room",
+        )
         return jsonify(result)
     except Exception as exc:
         return jsonify({"correct": None, "feedback": f"KI-Feedback derzeit nicht möglich: {exc}", "hint": ""}), 502
@@ -1262,13 +1906,14 @@ Antworte ausschließlich als JSON: {{"correct": true|false|null, "feedback": "2 
         response = generate_ai(
             [image_part, prompt],
             "Du analysierst respektvoll einfache Lernzeichnungen von Laborgeräten.",
-        ).text
-        result = parse_json_response(response)
-        tokens = estimate_tokens(prompt + response)
-        add_tokens(tokens)
+        )
+        response_text = response.text
+        result = parse_json_response(response_text)
+        tokens = response_token_count(response, prompt + response_text)
+        group = record_ai_tokens(tokens, request_id, sid)
         socketio.emit(
             "token_update",
-            {"today": get_today_tokens(), "limit": DAILY_TOKEN_LIMIT},
+            {"today": get_today_tokens(), "limit": DAILY_TOKEN_LIMIT, "ai_group": group},
             to="lehrer_room",
         )
         return jsonify(result)
@@ -1310,6 +1955,7 @@ def teacher_state():
                 "SELECT id,name,created_at,updated_at FROM gespeicherte_sitzungen ORDER BY updated_at DESC"
             ).fetchall()
         ]
+        continuation = continuation_dashboard_state(db)
     return jsonify(
         {
             "students": students,
@@ -1317,8 +1963,109 @@ def teacher_state():
             "snapshots": snapshots,
             "tokens": get_today_tokens(),
             "limit": DAILY_TOKEN_LIMIT,
+            "continuation": continuation,
+            "ai_group": ai_group_status(),
         }
     )
+
+
+@app.post("/api/lehrer/fortsetzung/approve-unique")
+@teacher_api_required
+def approve_unique_continuations():
+    approved = 0
+    with get_db() as db:
+        if not continuation_is_active(db):
+            return jsonify({"ok": False, "error": "Der Fortsetzungsmodus ist nicht aktiv."}), 409
+        state = continuation_dashboard_state(db)
+        for item in state["requests"]:
+            if not item.get("unique") or not item.get("target_student_id"):
+                continue
+            request_row = db.execute(
+                "SELECT * FROM fortsetzungsanfragen WHERE id=? AND status='wartend'",
+                (item["id"],),
+            ).fetchone()
+            if not request_row:
+                continue
+            approve_continuation_request(db, request_row, item["target_student_id"])
+            approved += 1
+        db.commit()
+    socketio.emit("fortsetzung_update", {}, to="lehrer_room")
+    return jsonify({"ok": True, "approved": approved})
+
+
+@app.post("/api/lehrer/fortsetzung/<request_id>")
+@teacher_api_required
+def decide_continuation_request(request_id):
+    data = request.get_json(silent=True) or {}
+    action = str(data.get("action", ""))
+    with get_db() as db:
+        request_row = db.execute(
+            "SELECT * FROM fortsetzungsanfragen WHERE id=? AND status='wartend'",
+            (request_id,),
+        ).fetchone()
+        if not request_row:
+            return jsonify({"ok": False, "error": "Anfrage nicht gefunden."}), 404
+        if action == "reject":
+            db.execute(
+                "UPDATE fortsetzungsanfragen SET status='abgelehnt',decided_at=? WHERE id=?",
+                (now_iso(), request_id),
+            )
+        elif action == "new":
+            db.execute(
+                """INSERT INTO schueler(id,pseudonym,klasse,joined_at,last_active,resume_token_hash)
+                   VALUES (?,?,?,?,?,?)""",
+                (
+                    request_row["new_student_id"],
+                    request_row["pseudonym"],
+                    request_row["klasse"],
+                    request_row["created_at"],
+                    now_iso(),
+                    request_row["resume_token_hash"],
+                ),
+            )
+            db.execute(
+                """UPDATE fortsetzungsanfragen SET target_student_id=?,status='freigegeben',decided_at=?
+                   WHERE id=?""",
+                (request_row["new_student_id"], now_iso(), request_id),
+            )
+        elif action == "approve":
+            target_id = str(data.get("target_student_id", ""))[:32]
+            if not target_id:
+                candidates = continuation_candidates(
+                    db, request_row["pseudonym"], request_row["klasse"]
+                )
+                if len(candidates) != 1:
+                    return jsonify(
+                        {"ok": False, "error": "Bitte einen eindeutigen Arbeitsstand auswählen."}
+                    ), 409
+                target_id = candidates[0]["id"]
+            try:
+                approve_continuation_request(db, request_row, target_id)
+            except ValueError as exc:
+                return jsonify({"ok": False, "error": str(exc)}), 409
+        else:
+            return jsonify({"ok": False, "error": "Unbekannte Aktion."}), 400
+        db.commit()
+    socketio.emit("fortsetzung_update", {}, to="lehrer_room")
+    return jsonify({"ok": True, "action": action})
+
+
+@app.post("/api/lehrer/fortsetzung/end")
+@teacher_api_required
+def end_continuation_mode():
+    with get_db() as db:
+        db.execute(
+            "UPDATE fortsetzungsanfragen SET status='abgelehnt',decided_at=? WHERE status='wartend'",
+            (now_iso(),),
+        )
+        db.execute("DELETE FROM fortsetzungsziele")
+        db.execute(
+            "UPDATE fortsetzungsstatus SET active=0 WHERE id=?",
+            (CONTINUATION_STATE_ID,),
+        )
+        db.commit()
+    socketio.emit("fortsetzung_update", {}, to="lehrer_room")
+    return jsonify({"ok": True})
 
 
 @app.post("/api/lehrer/student/<student_id>/toggle-ai")
@@ -1338,6 +2085,11 @@ def toggle_student_ai(student_id):
 def delete_student(student_id):
     clear_active_student_connections({student_id})
     with get_db() as db:
+        db.execute(
+            "DELETE FROM fortsetzungsanfragen WHERE new_student_id=? OR target_student_id=?",
+            (student_id, student_id),
+        )
+        db.execute("DELETE FROM fortsetzungsziele WHERE student_id=?", (student_id,))
         for table in ["fortschritt", "antworten", "ki_anfragen", "chat_messages", "zeichnungen", "arbeitsstaende"]:
             db.execute(f"DELETE FROM {table} WHERE schueler_id=?", (student_id,))
         db.execute("DELETE FROM schueler WHERE id=?", (student_id,))
@@ -1354,8 +2106,16 @@ def reset_live_session():
         student_ids = {
             row["id"] for row in db.execute("SELECT id FROM schueler").fetchall()
         }
-        for table in ["fortschritt", "antworten", "ki_anfragen", "chat_messages", "zeichnungen", "arbeitsstaende", "schueler"]:
+        for table in ["fortsetzungsanfragen", "fortsetzungsziele", "fortschritt", "antworten", "ki_anfragen", "chat_messages", "zeichnungen", "arbeitsstaende", "schueler"]:
             db.execute(f"DELETE FROM {table}")
+        db.execute(
+            "UPDATE fortsetzungsstatus SET active=0,source_name='',started_at=NULL WHERE id=?",
+            (CONTINUATION_STATE_ID,),
+        )
+        db.execute(
+            "UPDATE ki_gruppenfreigabe SET active=0,locked=0 WHERE id=?",
+            (AI_GROUP_STATE_ID,),
+        )
         db.commit()
     clear_active_student_connections(student_ids)
     ki_blocked_students.clear()
@@ -1394,6 +2154,7 @@ def load_snapshot(snapshot_id):
         }
         try:
             restore_live_snapshot(db, snapshot)
+            set_continuation_mode(db, active=False)
         except ValueError as exc:
             return jsonify({"ok": False, "error": str(exc)}), 422
     clear_active_student_connections(previous_student_ids)
@@ -1464,7 +2225,7 @@ def save_iserv_backup():
         return iserv_error_response(exc)
     flush = request_student_autosave_flush()
     with get_db() as db:
-        snapshot = capture_live_snapshot(db)
+        snapshot = capture_live_snapshot(db, preserve_resume_tokens=True)
     expected_digest = snapshot_digest(snapshot)
     try:
         remote = service.upload_snapshot(name, APP_ID, snapshot)
@@ -1527,6 +2288,10 @@ def preview_iserv_backup(remote_name):
 @app.post("/api/lehrer/iserv/backups/<remote_name>/load")
 @teacher_api_required
 def load_iserv_backup(remote_name):
+    data = request.get_json(silent=True) or {}
+    mode = str(data.get("mode", "review"))
+    if mode not in {"review", "continue"}:
+        return jsonify({"ok": False, "error": "Unbekannter Lademodus."}), 400
     try:
         envelope = make_iserv_service().download_snapshot(remote_name, APP_ID)
         snapshot = validate_live_snapshot(envelope["snapshot"])
@@ -1539,8 +2304,16 @@ def load_iserv_backup(remote_name):
         previous_student_ids = [
             row["id"] for row in db.execute("SELECT id FROM schueler").fetchall()
         ]
+    if mode == "review":
+        for student in snapshot["schueler"]:
+            student["resume_token_hash"] = None
     with get_db() as db:
         restore_live_snapshot(db, snapshot)
+        set_continuation_mode(
+            db,
+            active=mode == "continue",
+            source_name=str(envelope.get("name", "Unterrichtssitzung"))[:80],
+        )
 
     clear_active_student_connections(set(previous_student_ids))
     ki_blocked_students.clear()
@@ -1552,6 +2325,7 @@ def load_iserv_backup(remote_name):
             "ok": True,
             "name": str(envelope.get("name", "Unterrichtssitzung"))[:80],
             "temporary_server_restore": True,
+            "continuation_mode": mode == "continue",
         }
     )
 

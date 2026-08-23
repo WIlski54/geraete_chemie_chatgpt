@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Laborgeräte · Dashboard</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260822a') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260824a') }}">
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
   <script>window.TEACHER_TOKEN={{ teacher_action_token|tojson }}; window.DAILY_LIMIT={{ daily_limit }};</script>
-  <script src="{{ url_for('static', filename='js/dashboard.js', v='20260823a') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js', v='20260824a') }}" defer></script>
 </head>
 <body class="dashboard-page">
   <header class="dashboard-header">
@@ -22,6 +22,19 @@
       <article><span>KI-Tokens heute</span><strong id="kpi-tokens">0</strong></article>
     </section>
     <section class="dashboard-card budget-card"><div><span class="eyebrow">Tagesbudget</span><strong id="budget-label">0 / {{ daily_limit }}</strong></div><div class="progress-track"><span id="budget-fill"></span></div></section>
+    <section class="dashboard-card ai-control-card" aria-labelledby="ai-control-title">
+      <header class="card-title"><div><span class="eyebrow">Klassensteuerung</span><h2 id="ai-control-title">KI für eine Gruppe</h2></div><span class="iserv-status-badge is-off" id="ai-group-badge">Einzelfreigabe</span></header>
+      <p class="muted">Eine Gruppenfreigabe ersetzt während des gewählten Zeitfensters die einzelnen Rückfragen. Tages-, Gruppen- und persönliche Limits werden serverseitig geprüft.</p>
+      <div class="ai-group-form">
+        <label><span>Klasse (leer = alle)</span><input id="ai-group-class" maxlength="20" placeholder="z. B. 7a"></label>
+        <label><span>Dauer</span><select id="ai-group-minutes"><option value="5">5 Minuten</option><option value="10" selected>10 Minuten</option><option value="20">20 Minuten</option><option value="30">30 Minuten</option></select></label>
+        <label><span>Gruppenbudget</span><input id="ai-group-limit" type="number" min="100" max="50000" step="100" value="5000"></label>
+        <label><span>Pro Lernplatz</span><input id="ai-student-limit" type="number" min="100" max="10000" step="100" value="1000"></label>
+      </div>
+      <fieldset class="ai-type-options"><legend>Freigegebene Funktionen</legend><label><input type="checkbox" value="chat" checked> Tutor</label><label><input type="checkbox" value="korrektur" checked> Textfeedback</label><label><input type="checkbox" value="zeichnung" checked> Zeichnung</label><label><input type="checkbox" value="handschrift" checked> Handschrift</label></fieldset>
+      <div class="iserv-button-row"><button class="btn btn-primary" id="ai-group-grant" type="button">KI für Gruppe freigeben</button><button class="btn btn-danger-outline" id="ai-group-lock" type="button">KI für Gruppe sperren</button></div>
+      <div class="iserv-config-note" id="ai-group-note" role="status">Einzelanfragen sind aktiv; eine Gruppenfreigabe läuft nicht.</div>
+    </section>
     <div class="dashboard-columns">
       <section class="dashboard-card"><header class="card-title"><div><span class="eyebrow">Jetzt prüfen</span><h2>KI-Freigaben</h2></div><span class="count-badge" id="request-count">0</span></header><div id="request-list" class="request-list"><p class="empty-state">Keine offenen Anfragen.</p></div></section>
       <section class="dashboard-card"><header class="card-title"><div><span class="eyebrow">Kurzfristig auf dem App-Server</span><h2>Temporäre Sitzungen</h2></div></header><p class="muted">Diese unverschlüsselten Zwischenstände helfen während der Stunde; beim geprüften IServ-Abschluss werden sie mitgelöscht.</p><div class="snapshot-create"><input id="snapshot-name" placeholder="z. B. 7a · Stunde 1"><button class="btn btn-primary" id="snapshot-save">Zwischenstand</button></div><div id="snapshot-list" class="snapshot-list"></div></section>
@@ -43,6 +56,12 @@
       </div>
       <div class="iserv-config-note" id="iserv-config-note" role="status">Trage zunächst die IServ-Variablen serverseitig ein.</div>
       <div class="iserv-backup-list" id="iserv-backup-list"><p class="empty-state">Noch keine IServ-Sicherungen geladen.</p></div>
+    </section>
+    <section class="dashboard-card continuation-card" id="continuation-card" hidden>
+      <header class="card-title"><div><span class="eyebrow">Nächste Unterrichtsstunde</span><h2>Fortsetzungsmodus</h2></div><span class="count-badge" id="continuation-count">0</span></header>
+      <p class="muted" id="continuation-summary"></p>
+      <div class="iserv-button-row"><button class="btn btn-primary" id="continuation-approve-all" type="button">Alle eindeutigen Zuordnungen übernehmen</button><button class="btn btn-danger-outline" id="continuation-end" type="button">Fortsetzungsmodus beenden</button></div>
+      <div class="continuation-list" id="continuation-list"></div>
     </section>
     <section class="dashboard-card"><header class="card-title"><div><span class="eyebrow">Klassenübersicht</span><h2>Lernende</h2></div><button class="btn btn-danger-outline" id="reset-session">Alle aktuellen Aktivitäten löschen</button></header><div class="table-wrap"><table><thead><tr><th>Status</th><th>Pseudonym</th><th>Klasse</th><th>Fortschritt</th><th>Antworten</th><th>Automatisch gesichert</th><th>Letzte Aktivität</th><th>Aktionen</th></tr></thead><tbody id="student-table"><tr><td colspan="8" class="empty-state">Noch niemand angemeldet.</td></tr></tbody></table></div></section>
   </main>

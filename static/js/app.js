@@ -1090,10 +1090,29 @@ function initAiApproval() {
   document.getElementById('ki-request-cancel').addEventListener('click', closeAiOverlay);
 }
 
-function requestAiAccess(type, context, callback) {
+async function requestAiAccess(type, context, callback) {
   if (approvedRequests[type]) {
     callback(approvedRequests[type]);
     return;
+  }
+  try {
+    const response = await fetch('/api/ki-zugang', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({typ: type, kontext: context})
+    });
+    const result = await response.json().catch(() => ({}));
+    if (result.status === 'freigegeben') {
+      approvedRequests[type] = result.anfrage_id;
+      showToast('KI ist für deine Gruppe freigegeben.');
+      callback(result.anfrage_id);
+      return;
+    }
+    if (result.status === 'blocked' || result.status === 'budget_exceeded') {
+      showToast(result.message || 'Der KI-Zugang ist derzeit gesperrt.', 'error');
+      return;
+    }
+  } catch (_) {
+    // Bei einer kurzen Störung bleibt die normale Einzelanfrage verfügbar.
   }
   pendingAi = {type, context, callback};
   document.getElementById('ki-modal-icon').textContent = type === 'zeichnung' ? '✏️' : type === 'handschrift' ? '🖊️' : type === 'chat' ? '💬' : '🤖';
@@ -1117,6 +1136,9 @@ async function sendAiApprovalRequest() {
     const result = await response.json();
     if (result.status === 'budget_exceeded') {
       showToast('Das KI-Tagesbudget ist erreicht.', 'error');
+      closeAiOverlay();
+    } else if (result.status === 'blocked') {
+      showToast(result.message || 'Der KI-Zugang ist gesperrt.', 'error');
       closeAiOverlay();
     }
   } catch (_) {
@@ -1173,8 +1195,7 @@ function initSocket() {
   });
   classroomSocket.on('session_archived', async () => {
     await clearLocalAutomaticState();
-    clearResumeCredentials();
-    alert('Die Lehrkraft hat die Stunde sicher auf IServ archiviert. Dein temporärer Arbeitsstand wurde beendet.');
+    alert('Die Lehrkraft hat die Stunde sicher auf IServ archiviert. Dein Browser behält nur das zufällige Fortsetzungstoken; Arbeitsdaten liegen nicht mehr auf dem App-Server.');
     location.replace('/login');
   });
   classroomSocket.on('session_invalidated', async () => {

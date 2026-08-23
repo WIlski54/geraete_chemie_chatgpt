@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Laborgeräte · Anmeldung</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260822a') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260824a') }}">
 </head>
 <body class="login-page">
   <main class="login-shell">
@@ -22,6 +22,7 @@
       <span class="eyebrow">Dein Lernplatz</span>
       <h2>Starte mit einem Pseudonym</h2>
       <p class="muted">Nutze keinen echten Namen. Ein Fantasiename reicht.</p>
+      <div class="alert alert-info" id="resume-status" role="status" hidden></div>
       {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
       <form method="post" class="stack-lg">
         <label class="field-label" for="pseudonym">Pseudonym</label>
@@ -38,6 +39,7 @@
             <div class="privacy-long">
               <p>Verwende keine Klarnamen, Kontaktdaten, Gesundheitsdaten oder andere sensible Angaben. Während der Stunde wird dein Arbeitsstand automatisch auf deinem Gerät und vorübergehend in der SQLite-Datenbank des Servers der Lernapp gespeichert. Zusätzlich kannst du freiwillig eine JSON-Sicherung anlegen. Beim Unterrichtsabschluss kann die Lehrkraft die Sitzung verschlüsselt im Schul-IServ archivieren; nach erfolgreicher Kontrolle werden die temporären Schülerdaten auf dem Server der Lernapp gelöscht.</p>
               <p>Der KI-Tutor und die Bildanalyse verwenden generative KI (Google Gemini), erst nachdem deine Lehrkraft die jeweilige Nutzung freigegeben hat. KI kann Fehler machen und ersetzt keine Bewertung durch die Lehrkraft.</p>
+              <p>Für eine spätere Fortsetzungsstunde kann ein zufälliges Wiederaufnahmetoken im Browser verbleiben; auf dem Server und in der verschlüsselten IServ-Sicherung liegt nur dessen nicht rückrechenbarer Hash. Es werden dafür keine IP-, MAC- oder Gerätekennungen verwendet.</p>
               <p>Die Lehrkraft kann die aktuelle Klassensitzung löschen und gespeicherte Sitzungen getrennt verwalten. Für Auskunft, Berichtigung oder Löschung wende dich an deine Lehrkraft oder die schulische Datenschutzbeauftragte bzw. den schulischen Datenschutzbeauftragten.</p>
               <p>Dieser Text ist eine schulische Transparenzvorlage und keine Rechtsberatung.</p>
             </div>
@@ -73,18 +75,33 @@
       let saved = null;
       try { saved = JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) {}
       if (!saved?.studentId || !saved?.token) return;
-      fetch('/api/resume', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({student_id: saved.studentId, token: saved.token}),
-      }).then(async response => {
-        const result = await response.json().catch(() => ({}));
-        if (response.ok && result.ok) location.replace(result.redirect || '/schueler');
-        else if (response.status === 401) {
-          localStorage.removeItem(key);
-          clearExpiredWorkspace(saved.studentId);
-        }
-      }).catch(() => {});
+      const resumeStatus = document.getElementById('resume-status');
+      let retryTimer = null;
+      const tryResume = () => fetch('/api/resume', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({student_id: saved.studentId, token: saved.token}),
+        }).then(async response => {
+          const result = await response.json().catch(() => ({}));
+          if (response.ok && result.ok) {
+            if (retryTimer) clearTimeout(retryTimer);
+            location.replace(result.redirect || '/schueler');
+          } else if (response.status === 401) {
+            if (retryTimer) clearTimeout(retryTimer);
+            localStorage.removeItem(key);
+            clearExpiredWorkspace(saved.studentId);
+            resumeStatus.hidden = true;
+          } else if (response.status === 409 && result.pending_restore) {
+            resumeStatus.hidden = false;
+            resumeStatus.textContent = (result.message || 'Dein früherer Arbeitsstand kann wieder geladen werden, sobald die Lehrkraft die Fortsetzungsstunde geöffnet hat.') + ' Diese Seite prüft automatisch weiter.';
+            retryTimer = setTimeout(tryResume, 3000);
+          }
+        }).catch(() => {
+          resumeStatus.hidden = false;
+          resumeStatus.textContent = 'Die Verbindung wird automatisch erneut geprüft …';
+          retryTimer = setTimeout(tryResume, 4000);
+        });
+      tryResume();
     })();
   </script>
 </body>

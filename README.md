@@ -11,6 +11,7 @@ Interaktives Chemie-Arbeitsblatt für den Klassenunterricht in Jahrgang 7.
 - tap-basiertes Laborgeräte-Domino
 - Originalmaterial mit iPad-sicherem Fokus-Reader
 - Live-Lehrerdashboard, Antwortprotokoll und KI-Freigaben
+- zeitlich begrenzte KI-Gruppenfreigaben mit Funktionsauswahl, Gruppen-/Einzellimits und dauerhafter Sofortsperre
 - automatische Schüler-Zwischensicherung im Browser und auf dem App-Server samt Sitzungswiederaufnahme
 - zusätzliche manuelle Schüler-JSON-Sicherung und temporäre serverseitige Unterrichtssitzungen
 - geprüfte, verschlüsselte Langzeitsicherung auf dem Schul-IServ per WebDAV mit anschließender Datenbereinigung
@@ -78,11 +79,16 @@ Provider-Snapshots, Volume-Backups, Serverlogs oder vorgelagerten Sicherungen.
 Deren Aufbewahrung muss für den Produktivbetrieb zusätzlich in der
 Hetzner-/Hosting-Konfiguration begrenzt und dokumentiert werden.
 
-Beim Laden einer IServ-Sicherung wird sie als temporäre Live-Sitzung auf dem
-App-Server bereitgestellt. Eine bestehende Live-Sitzung wird dabei nach einer
-Bestätigung ersetzt und nicht stillschweigend als weitere unverschlüsselte Kopie
-behalten. Nach der Einsicht kann die geladene Sitzung wieder über denselben
-geprüften Abschlussknopf entfernt werden.
+Beim Laden bietet das Dashboard zwei getrennte Modi an. „Zur Ansicht laden“
+stellt die Sicherung als temporäre Live-Sitzung ohne Schüler-Wiederanmeldung
+bereit. „Fortsetzungsstunde“ lädt dagegen die Arbeitsstände für die nächste
+Stunde: Browser mit einem passenden zufälligen Token verbinden sich automatisch.
+Fehlt das Token (anderes Gerät, gelöschte Browserdaten oder ältere Sicherung),
+meldet sich der Schüler mit Pseudonym und Klasse an. Eindeutige Treffer kann die
+Lehrkraft mit einem einzigen Sammelknopf übernehmen; mehrdeutige Treffer werden
+einzeln zur Auswahl angezeigt. Eine bestehende Live-Sitzung wird in beiden Modi
+erst nach Bestätigung ersetzt. Nach der Nutzung kann die geladene Sitzung wieder
+über den geprüften IServ-Abschluss entfernt werden.
 
 Jede Sicherung enthält im verschlüsselten Umschlag die eindeutige Arbeitsblatt-ID
 und den frei vergebenen Sicherungsnamen. Neue Dateinamen tragen zusätzlich einen
@@ -108,10 +114,28 @@ des Schülergeräts und anschließend in `arbeitsstaende` auf dem App-Server
 gespeichert. Lokale Einträge tragen eine Ablaufzeit von 48 Stunden. Ein zufälliges,
 gehasht auf dem Server hinterlegtes Wiederaufnahmetoken verbindet denselben
 Browser nach Schließen und erneutem Öffnen wieder mit der laufenden Sitzung. Nach
-einem erfolgreichen IServ-Abschluss wird die Serversitzung ungültig; verbundene
-Geräte entfernen daraufhin auch Token und lokalen Arbeitsstand. Der Sicherungsstatus
-ist auf der Schülerseite sichtbar, der Zeitpunkt des letzten Server-Autosaves im
-Lehrer-Dashboard.
+einem erfolgreichen IServ-Abschluss wird der lokale Arbeitsstand entfernt; nur
+das zufällige Fortsetzungstoken bleibt im Browser. IServ enthält ausschließlich
+den zugehörigen Hash innerhalb der verschlüsselten Sicherung. Weder IP-Adresse
+noch MAC-Adresse werden zur Wiederaufnahme verwendet. Öffnet ein Schüler das
+Arbeitsblatt vor der Lehrkraft, prüft die Anmeldeseite automatisch weiter und
+verbindet den Lernplatz, sobald die Fortsetzungsstunde geladen wurde. Der
+Sicherungsstatus ist auf der Schülerseite sichtbar, der Zeitpunkt des letzten
+Server-Autosaves im Lehrer-Dashboard.
+
+## KI-Gruppensteuerung
+
+Die Lehrkraft kann KI-Funktionen für eine Klasse oder für alle aktuellen
+Lernplätze zeitlich begrenzt freigeben. Tutor, Textfeedback, Zeichnungsanalyse
+und Handschrifterkennung sind einzeln auswählbar. Zusätzlich gelten ein
+Gruppenbudget, ein persönliches Budget pro Lernplatz und das globale Tagesbudget.
+Die tatsächlich vom KI-Anbieter gemeldeten Gesamttokens werden bevorzugt
+verwendet; nur wenn diese Metadaten fehlen, nutzt die Anwendung eine Schätzung.
+Nach Zeit- oder Budgetende fällt die Anwendung auf einzelne Lehrkraftfreigaben
+zurück. „KI für Gruppe sperren“ beendet die Freigabe sofort, weist noch wartende
+Anfragen der Gruppe ab und speichert die Sperre in SQLite, sodass sie auch nach
+einem Container-Neustart und für später hinzukommende Geräte derselben Klasse
+gilt. Eine neue ausdrückliche Gruppenfreigabe hebt diese Sperre wieder auf.
 
 ## Deployment
 

@@ -92,6 +92,14 @@ class LaborgeraeteAppTest(unittest.TestCase):
             headers=headers,
         ).get_json()
         self.assertTrue(snapshot["ok"])
+        with core.get_db() as db:
+            local_copy = json.loads(
+                db.execute(
+                    "SELECT snapshot_json FROM gespeicherte_sitzungen WHERE id=?",
+                    (snapshot["id"],),
+                ).fetchone()["snapshot_json"]
+            )
+        self.assertIsNone(local_copy["schueler"][0]["resume_token_hash"])
 
         reset = self.teacher.post("/api/lehrer/reset", headers=headers)
         self.assertTrue(reset.get_json()["ok"])
@@ -204,14 +212,188 @@ class LaborgeraeteAppTest(unittest.TestCase):
 
     def test_snapshot_validation_accepts_backups_from_before_autosave(self):
         self.login_student(self.student)
+        self.student.post(
+            "/api/ki-anfrage", json={"typ": "chat", "kontext": "Altbestand"}
+        )
         with core.get_db() as db:
             legacy_snapshot = core.capture_live_snapshot(db)
         legacy_snapshot.pop("arbeitsstaende")
         for student in legacy_snapshot["schueler"]:
             student.pop("resume_token_hash")
+        for ai_request in legacy_snapshot["ki_anfragen"]:
+            ai_request.pop("grant_mode")
         validated = core.validate_live_snapshot(legacy_snapshot)
         self.assertEqual(validated["arbeitsstaende"], [])
         self.assertIsNone(validated["schueler"][0]["resume_token_hash"])
+        self.assertEqual(validated["ki_anfragen"][0]["grant_mode"], "einzel")
+
+    def test_iserv_continuation_automatically_resumes_same_browser_token(self):
+        self.login_student(self.student)
+        with self.student.session_transaction() as student_session:
+            student_id = student_session["schueler_id"]
+            resume_token = student_session["resume_token"]
+        self.student.post(
+            "/api/arbeitsstand",
+            json={
+                "revision": 4,
+                "state": {
+                    "schema_version": 1,
+                    "app_id": core.APP_ID,
+                    "fields": {"task1B": "alter Arbeitsstand"},
+                },
+            },
+        )
+        with core.get_db() as db:
+            archived_snapshot = core.capture_live_snapshot(
+                db, preserve_resume_tokens=True
+            )
+        self.assertIsNotNone(archived_snapshot["schueler"][0]["resume_token_hash"])
+
+        self.teacher.post("/lehrer/login", data={"passwort": core.LEHRER_PASSWORD})
+        headers = self.teacher_headers(self.teacher)
+
+        class ContinuationService:
+            def download_snapshot(self, remote_name, expected_app_id):
+                return {
+                    "app_id": expected_app_id,
+                    "name": "7a · Stunde 1",
+                    "snapshot": archived_snapshot,
+                }
+
+        with patch.object(core, "make_iserv_service", return_value=ContinuationService()):
+            loaded = self.teacher.post(
+                "/api/lehrer/iserv/backups/fortsetzung.iabackup/load",
+                json={"mode": "continue"},
+                headers=headers,
+            )
+        self.assertEqual(loaded.status_code, 200)
+        self.assertTrue(loaded.get_json()["continuation_mode"])
+
+        reopened = core.app.test_client()
+        resumed = reopened.post(
+            "/api/resume", json={"student_id": student_id, "token": resume_token}
+        )
+        self.assertEqual(resumed.status_code, 200)
+        restored = reopened.get("/api/arbeitsstand").get_json()
+        self.assertEqual(restored["revision"], 4)
+        state = self.teacher.get("/api/lehrer/state", headers=headers).get_json()
+        self.assertTrue(state["continuation"]["active"])
+        self.assertEqual(state["continuation"]["targets_claimed"], 1)
+
+    def test_continuation_bulk_approves_unique_manual_login(self):
+        self.login_student(self.student, pseudonym="Mondfalter")
+        self.student.post(
+            "/api/antwort",
+            json={
+                "aufgabe": "1",
+                "niveau": "A",
+                "typ": "auswahl",
+                "antwort": "Schutzbrille",
+                "korrekt": True,
+            },
+        )
+        with core.get_db() as db:
+            archived_snapshot = core.capture_live_snapshot(
+                db, preserve_resume_tokens=True
+            )
+        old_student_id = archived_snapshot["schueler"][0]["id"]
+        archived_snapshot["schueler"][0]["resume_token_hash"] = None
+
+        self.teacher.post("/lehrer/login", data={"passwort": core.LEHRER_PASSWORD})
+        headers = self.teacher_headers(self.teacher)
+
+        class LegacyContinuationService:
+            def download_snapshot(self, remote_name, expected_app_id):
+                return {
+                    "app_id": expected_app_id,
+                    "name": "7a · ältere Sicherung",
+                    "snapshot": archived_snapshot,
+                }
+
+        with patch.object(core, "make_iserv_service", return_value=LegacyContinuationService()):
+            loaded = self.teacher.post(
+                "/api/lehrer/iserv/backups/legacy.iabackup/load",
+                json={"mode": "continue"},
+                headers=headers,
+            )
+        self.assertEqual(loaded.status_code, 200)
+
+        returning_student = core.app.test_client()
+        waiting = self.login_student(returning_student, pseudonym="Mondfalter")
+        self.assertEqual(waiting.status_code, 302)
+        self.assertIn("/fortsetzung/warten", waiting.headers["Location"])
+
+        state = self.teacher.get("/api/lehrer/state", headers=headers).get_json()
+        self.assertEqual(state["continuation"]["unique_count"], 1)
+        approved = self.teacher.post(
+            "/api/lehrer/fortsetzung/approve-unique", headers=headers
+        )
+        self.assertEqual(approved.get_json()["approved"], 1)
+
+        completed = returning_student.post("/api/fortsetzung/status")
+        self.assertEqual(completed.get_json()["status"], "freigegeben")
+        with returning_student.session_transaction() as student_session:
+            self.assertEqual(student_session["schueler_id"], old_student_id)
+        detail = self.teacher.get(f"/lehrer/schueler/{old_student_id}")
+        self.assertIn("Schutzbrille", detail.get_data(as_text=True))
+
+    def test_group_ai_grant_applies_limits_and_immediate_lock(self):
+        self.login_student(self.student)
+        self.teacher.post("/lehrer/login", data={"passwort": core.LEHRER_PASSWORD})
+        headers = self.teacher_headers(self.teacher)
+        granted = self.teacher.post(
+            "/api/lehrer/ki-gruppe",
+            json={
+                "action": "grant",
+                "klasse": "7a",
+                "minutes": 10,
+                "token_limit": 1200,
+                "per_student_limit": 500,
+                "types": ["chat", "zeichnung"],
+            },
+            headers=headers,
+        )
+        self.assertEqual(granted.status_code, 200)
+        group = granted.get_json()["ai_group"]
+        self.assertTrue(group["active"])
+        self.assertEqual(group["remaining_tokens"], 1200)
+
+        access = self.student.post(
+            "/api/ki-zugang", json={"typ": "zeichnung", "kontext": "Reagenzglas"}
+        )
+        self.assertEqual(access.get_json()["status"], "freigegeben")
+        request_id = access.get_json()["anfrage_id"]
+        with core.get_db() as db:
+            row = db.execute(
+                "SELECT grant_mode,status FROM ki_anfragen WHERE id=?", (request_id,)
+            ).fetchone()
+        self.assertEqual(row["grant_mode"], "gruppe")
+        self.assertEqual(row["status"], "freigegeben")
+
+        locked = self.teacher.post(
+            "/api/lehrer/ki-gruppe", json={"action": "lock"}, headers=headers
+        )
+        self.assertEqual(locked.status_code, 200)
+        # Die Gruppensperre liegt in SQLite und übersteht damit auch einen
+        # Container-Neustart, bei dem die flüchtige Einzelliste leer wäre.
+        core.ki_blocked_students.clear()
+        blocked = self.student.post(
+            "/api/ki-zugang", json={"typ": "zeichnung", "kontext": "erneut"}
+        )
+        self.assertEqual(blocked.get_json()["status"], "blocked")
+        later_student = core.app.test_client()
+        self.login_student(later_student, pseudonym="Spätfuchs")
+        later_blocked = later_student.post(
+            "/api/ki-zugang", json={"typ": "chat", "kontext": "später Login"}
+        )
+        self.assertEqual(later_blocked.get_json()["status"], "blocked")
+
+    def test_dashboard_exposes_continuation_and_group_controls(self):
+        self.teacher.post("/lehrer/login", data={"passwort": core.LEHRER_PASSWORD})
+        page = self.teacher.get("/lehrer").get_data(as_text=True)
+        self.assertIn("KI für eine Gruppe", page)
+        self.assertIn("Fortsetzungsmodus", page)
+        self.assertIn("Alle eindeutigen Zuordnungen übernehmen", page)
 
     def test_editable_drawing_is_saved_and_survives_session_restore(self):
         self.login_student(self.student)
@@ -371,7 +553,7 @@ class LaborgeraeteAppTest(unittest.TestCase):
                     "app_id": expected_app_id,
                     "name": "7a Stunde 1",
                     "created_at": "2026-08-21T12:00:00Z",
-                    "snapshot": remote_snapshot,
+                    "snapshot": getattr(self, "uploaded", remote_snapshot),
                 }
 
             def delete_snapshot(self, remote_name, expected_app_id):

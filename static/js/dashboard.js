@@ -14,12 +14,17 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('iserv-test').addEventListener('click', testIservConnection);
   document.getElementById('iserv-save').addEventListener('click', saveIservBackup);
   document.getElementById('iserv-refresh').addEventListener('click', loadIservBackups);
+  document.getElementById('ai-group-grant').addEventListener('click', grantAiGroup);
+  document.getElementById('ai-group-lock').addEventListener('click', lockAiGroup);
+  document.getElementById('continuation-approve-all').addEventListener('click', approveUniqueContinuations);
+  document.getElementById('continuation-end').addEventListener('click', endContinuationMode);
   document.getElementById('reset-session').addEventListener('click', resetSession);
   if (typeof io === 'function') {
     socket = io();
     socket.on('connect', () => socket.emit('lehrer_join'));
-    ['neuer_schueler','schueler_online','schueler_offline','fortschritt_update','autosave_update','neue_anfrage','session_reset','session_reloaded'].forEach(event => socket.on(event, loadState));
+    ['neuer_schueler','schueler_online','schueler_offline','fortschritt_update','autosave_update','neue_anfrage','session_reset','session_reloaded','fortsetzung_update'].forEach(event => socket.on(event, loadState));
     socket.on('token_update', updateTokenDisplay);
+    socket.on('ki_gruppe_status', updateAiGroupDisplay);
   }
 });
 
@@ -32,10 +37,108 @@ async function loadState() {
   renderStudents(state.students || []);
   renderRequests(state.requests || []);
   renderSnapshots(state.snapshots || []);
-  updateTokenDisplay({today: state.tokens, limit: state.limit});
+  renderContinuation(state.continuation || {});
+  updateTokenDisplay({today: state.tokens, limit: state.limit, ai_group: state.ai_group});
   document.getElementById('kpi-students').textContent = state.students.filter(item => item.online).length;
   document.getElementById('kpi-requests').textContent = state.requests.length;
   document.getElementById('kpi-answers').textContent = state.students.reduce((sum, item) => sum + Number(item.answer_count || 0), 0);
+}
+
+function renderContinuation(state) {
+  const card = document.getElementById('continuation-card');
+  card.hidden = !state.active;
+  if (!state.active) return;
+  const requests = state.requests || [];
+  document.getElementById('continuation-count').textContent = requests.length;
+  document.getElementById('continuation-summary').textContent = `„${state.source_name || 'Geladene Sitzung'}“ · ${state.targets_claimed || 0} automatisch oder manuell verbunden · ${state.targets_available || 0} Arbeitsstände verfügbar · ${state.unique_count || 0} eindeutige Anfragen.`;
+  const approveAll = document.getElementById('continuation-approve-all');
+  approveAll.disabled = !state.unique_count;
+  approveAll.textContent = state.unique_count ? `${state.unique_count} eindeutige Zuordnung${state.unique_count === 1 ? '' : 'en'} übernehmen` : 'Keine eindeutigen Zuordnungen offen';
+  const list = document.getElementById('continuation-list');
+  list.replaceChildren();
+  if (!requests.length) {
+    list.innerHTML = '<p class="empty-state">Noch keine manuellen Fortsetzungsanfragen. Vorhandene Browser-Token werden automatisch verbunden.</p>';
+    return;
+  }
+  requests.forEach(item => {
+    const article = document.createElement('article');
+    article.className = 'continuation-item';
+    const candidates = item.candidates || [];
+    const matchText = item.unique ? 'Eindeutiger Arbeitsstand gefunden' : candidates.length ? `${candidates.length} mögliche Arbeitsstände` : 'Kein alter Arbeitsstand gefunden';
+    const options = candidates.map(candidate => `<option value="${escapeHtml(candidate.id)}">${escapeHtml(candidate.pseudonym)} · ${escapeHtml(candidate.klasse)} · ${candidate.progress_count || 0} Stationen · ${candidate.answer_count || 0} Antworten</option>`).join('');
+    article.innerHTML = `<div><strong>${escapeHtml(item.pseudonym)} · Klasse ${escapeHtml(item.klasse)}</strong><small>${escapeHtml(matchText)}</small>${candidates.length ? `<select aria-label="Arbeitsstand auswählen">${options}</select>` : ''}</div><div class="request-actions">${candidates.length ? '<button class="btn btn-outline" data-continuation-approve>Zuordnen</button>' : ''}<button class="btn btn-quiet" data-continuation-new>Neu starten</button><button class="btn btn-danger-outline" data-continuation-reject>Abweisen</button></div>`;
+    article.querySelector('[data-continuation-approve]')?.addEventListener('click', () => decideContinuation(item.id, 'approve', article.querySelector('select')?.value));
+    article.querySelector('[data-continuation-new]').addEventListener('click', () => decideContinuation(item.id, 'new'));
+    article.querySelector('[data-continuation-reject]').addEventListener('click', () => decideContinuation(item.id, 'reject'));
+    list.appendChild(article);
+  });
+}
+
+async function approveUniqueContinuations() {
+  if (!confirm('Alle aktuell eindeutigen Pseudonym- und Klassenzuordnungen gemeinsam übernehmen?')) return;
+  const response = await fetch('/api/lehrer/fortsetzung/approve-unique', {method: 'POST', headers: headers()});
+  const result = await responseJson(response);
+  showToast(response.ok ? `${result.approved || 0} Lernplätze wurden zugeordnet.` : (result.error || 'Zuordnung fehlgeschlagen.'), response.ok ? 'ok' : 'error');
+  loadState();
+}
+
+async function decideContinuation(id, action, targetStudentId = '') {
+  const response = await fetch(`/api/lehrer/fortsetzung/${encodeURIComponent(id)}`, {
+    method: 'POST', headers: headers(), body: JSON.stringify({action, target_student_id: targetStudentId})
+  });
+  const result = await responseJson(response);
+  showToast(response.ok ? 'Fortsetzungsanfrage bearbeitet.' : (result.error || 'Anfrage konnte nicht bearbeitet werden.'), response.ok ? 'ok' : 'error');
+  loadState();
+}
+
+async function endContinuationMode() {
+  if (!confirm('Fortsetzungsmodus beenden? Noch wartende Anfragen werden abgewiesen; bereits verbundene Lernplätze bleiben erhalten.')) return;
+  const response = await fetch('/api/lehrer/fortsetzung/end', {method: 'POST', headers: headers()});
+  showToast(response.ok ? 'Fortsetzungsmodus beendet.' : 'Fortsetzungsmodus konnte nicht beendet werden.', response.ok ? 'ok' : 'error');
+  loadState();
+}
+
+function updateAiGroupDisplay(group = {}) {
+  const badge = document.getElementById('ai-group-badge');
+  const note = document.getElementById('ai-group-note');
+  badge.className = `iserv-status-badge ${group.active ? 'is-online' : group.locked ? 'is-error' : 'is-off'}`;
+  badge.textContent = group.active ? 'Freigegeben' : group.locked ? 'Gesperrt' : 'Einzelfreigabe';
+  if (!group.active) {
+    note.className = `iserv-config-note ${group.locked ? 'is-error' : 'is-info'}`;
+    note.textContent = group.locked ? `KI ist für ${group.klasse ? `Klasse ${group.klasse}` : 'alle Lernenden'} vollständig gesperrt.` : (group.reason || 'Einzelanfragen sind aktiv; eine Gruppenfreigabe läuft nicht.');
+    return;
+  }
+  const expiry = group.expires_at ? formatDate(group.expires_at) : 'ohne Zeitangabe';
+  const functions = (group.allowed_types || []).map(type => ({chat:'Tutor',korrektur:'Textfeedback',zeichnung:'Zeichnung',handschrift:'Handschrift'}[type] || type)).join(', ');
+  note.className = 'iserv-config-note is-ok';
+  note.textContent = `${group.klasse ? `Klasse ${group.klasse}` : 'Alle aktuellen Lernenden'} · bis ${expiry} · ${Number(group.tokens_used || 0).toLocaleString('de-DE')} / ${Number(group.token_limit || 0).toLocaleString('de-DE')} Gruppentokens · max. ${Number(group.per_student_limit || 0).toLocaleString('de-DE')} je Lernplatz · ${functions}.`;
+}
+
+async function grantAiGroup() {
+  const types = [...document.querySelectorAll('.ai-type-options input:checked')].map(input => input.value);
+  const payload = {
+    action: 'grant',
+    klasse: document.getElementById('ai-group-class').value.trim(),
+    minutes: Number(document.getElementById('ai-group-minutes').value),
+    token_limit: Number(document.getElementById('ai-group-limit').value),
+    per_student_limit: Number(document.getElementById('ai-student-limit').value),
+    types
+  };
+  if (!confirm(`KI für ${payload.klasse ? `Klasse ${payload.klasse}` : 'alle aktuellen Lernenden'} für ${payload.minutes} Minuten freigeben?\nGruppenbudget: ${payload.token_limit.toLocaleString('de-DE')} Tokens.`)) return;
+  const response = await fetch('/api/lehrer/ki-gruppe', {method: 'POST', headers: headers(), body: JSON.stringify(payload)});
+  const result = await responseJson(response);
+  if (!response.ok || !result.ok) return showToast(result.error || 'Gruppenfreigabe fehlgeschlagen.', 'error');
+  updateAiGroupDisplay(result.ai_group || {});
+  showToast(`KI für ${result.affected || 0} Lernplätze freigegeben.`);
+  loadState();
+}
+
+async function lockAiGroup() {
+  if (!confirm('KI für die aktuell freigegebene Gruppe sofort sperren?')) return;
+  const response = await fetch('/api/lehrer/ki-gruppe', {method: 'POST', headers: headers(), body: JSON.stringify({action: 'lock'})});
+  const result = await responseJson(response);
+  showToast(response.ok ? `KI für ${result.affected || 0} Lernplätze gesperrt.` : (result.error || 'Sperren fehlgeschlagen.'), response.ok ? 'ok' : 'error');
+  loadState();
 }
 
 function renderStudents(students) {
@@ -207,8 +310,9 @@ function renderIservBackups(backups) {
     article.className = 'iserv-backup-item';
     const displayDate = item.created_at ? formatDate(item.created_at) : (formatBackupFilename(item.filename) || formatDate(item.modified));
     const backupName = item.name || 'Sicherung ohne Bezeichnung';
-    article.innerHTML = `<div><strong>${escapeHtml(backupName)}</strong><small>${escapeHtml(iservWorksheetName)} · ${escapeHtml(displayDate)} · ${escapeHtml(formatBytes(item.size))}</small><code>${escapeHtml(item.filename)}</code></div><div class="request-actions"><button class="btn btn-outline" type="button" data-iserv-load>Prüfen &amp; laden</button><button class="btn btn-danger-outline" type="button" data-iserv-delete>Löschen</button></div>`;
-    article.querySelector('[data-iserv-load]').addEventListener('click', () => previewAndLoadIservBackup(item.filename));
+    article.innerHTML = `<div><strong>${escapeHtml(backupName)}</strong><small>${escapeHtml(iservWorksheetName)} · ${escapeHtml(displayDate)} · ${escapeHtml(formatBytes(item.size))}</small><code>${escapeHtml(item.filename)}</code></div><div class="request-actions"><button class="btn btn-outline" type="button" data-iserv-load>Zur Ansicht laden</button><button class="btn btn-primary" type="button" data-iserv-continue>Fortsetzungsstunde</button><button class="btn btn-danger-outline" type="button" data-iserv-delete>Löschen</button></div>`;
+    article.querySelector('[data-iserv-load]').addEventListener('click', () => previewAndLoadIservBackup(item.filename, 'review'));
+    article.querySelector('[data-iserv-continue]').addEventListener('click', () => previewAndLoadIservBackup(item.filename, 'continue'));
     article.querySelector('[data-iserv-delete]').addEventListener('click', () => deleteIservBackup(item.filename, backupName));
     list.appendChild(article);
   });
@@ -231,7 +335,7 @@ async function deleteIservBackup(filename, backupName) {
   await loadIservBackups();
 }
 
-async function previewAndLoadIservBackup(filename) {
+async function previewAndLoadIservBackup(filename, mode = 'review') {
   setIservNote('Sicherung wird heruntergeladen, entschlüsselt und geprüft …', 'info');
   const previewResponse = await fetch(`/api/lehrer/iserv/backups/${encodeURIComponent(filename)}/preview`, {headers: {'X-Teacher-Action-Token': token}});
   const preview = await responseJson(previewResponse);
@@ -241,18 +345,21 @@ async function previewAndLoadIservBackup(filename) {
   }
   const summary = preview.summary || {};
   const details = `„${preview.name}“\n${formatDate(preview.created_at)}\n${summary.students || 0} Lernende · ${summary.answers || 0} Antworten · ${summary.progress || 0} Fortschrittseinträge · ${summary.drawings || 0} Zeichnungen`;
-  if (!confirm(`${details}\n\nDiese Sitzung als temporäre Live-Sitzung laden? Eine derzeit offene Live-Sitzung wird dabei ersetzt. Sie wird nicht zusätzlich auf diesem Server kopiert.`)) {
+  const purpose = mode === 'continue'
+    ? 'Diese Sicherung als Fortsetzungsstunde öffnen? Vorhandene Browser-Token werden sicher automatisch verbunden; übrige Schüler erscheinen als Sammelanfragen.'
+    : 'Diese Sitzung nur zur Ansicht als temporäre Live-Sitzung laden? Eine derzeit offene Live-Sitzung wird dabei ersetzt.';
+  if (!confirm(`${details}\n\n${purpose}`)) {
     setIservNote('Sicherung erfolgreich geprüft; Laden wurde abgebrochen.', 'ok');
     return;
   }
-  const loadResponse = await fetch(`/api/lehrer/iserv/backups/${encodeURIComponent(filename)}/load`, {method: 'POST', headers: headers()});
+  const loadResponse = await fetch(`/api/lehrer/iserv/backups/${encodeURIComponent(filename)}/load`, {method: 'POST', headers: headers(), body: JSON.stringify({mode})});
   const result = await responseJson(loadResponse);
   if (!loadResponse.ok || !result.ok) {
     setIservNote(result.error || 'Die Sitzung konnte nicht geladen werden.', 'error');
     return showToast(result.error || 'IServ-Sitzung konnte nicht geladen werden.', 'error');
   }
-  setIservNote(`„${result.name}“ wurde als temporäre Live-Sitzung geladen. Nach der Einsicht kannst du sie erneut geprüft auf IServ archivieren und vom App-Server entfernen.`, 'ok');
-  showToast('IServ-Sitzung geladen.');
+  setIservNote(result.continuation_mode ? `„${result.name}“ wurde als Fortsetzungsstunde geöffnet. Browser mit gültigem Token verbinden sich automatisch; eindeutige Restzuordnungen kannst du gesammelt freigeben.` : `„${result.name}“ wurde nur zur Ansicht als temporäre Live-Sitzung geladen.`, 'ok');
+  showToast(result.continuation_mode ? 'Fortsetzungsstunde geöffnet.' : 'IServ-Sitzung zur Ansicht geladen.');
   loadState();
 }
 
@@ -302,6 +409,7 @@ function updateTokenDisplay(data) {
   const percent = Math.min(100, today / limit * 100);
   fill.style.width = `${percent}%`;
   fill.style.background = percent > 90 ? '#c62f3b' : percent > 70 ? '#F7B800' : 'linear-gradient(90deg,#006AB3,#AD007C)';
+  if (data.ai_group) updateAiGroupDisplay(data.ai_group);
 }
 
 function formatDate(value) { if (!value) return '–'; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString('de-DE', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }

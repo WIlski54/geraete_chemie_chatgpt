@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Arbeitsstand wird zugeordnet</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260824a') }}">
+</head>
+<body class="login-page">
+  <main class="waiting-shell">
+    <section class="waiting-card" aria-live="polite">
+      <img src="{{ url_for('static', filename='img/logo-gsm-transparent.png') }}" alt="Gesamtschule Meiderich" class="login-logo">
+      <span class="eyebrow">Fortsetzungsstunde</span>
+      <h1>Dein Arbeitsstand wird zugeordnet</h1>
+      <p><strong>{{ pseudonym }}</strong> · Klasse {{ klasse }}</p>
+      <div class="waiting-indicator" aria-hidden="true"><span></span><span></span><span></span></div>
+      <p class="muted" id="continuation-message">Deine Lehrkraft kann alle eindeutigen Zuordnungen gemeinsam freigeben. Lass diese Seite geöffnet.</p>
+      <form method="post" action="{{ url_for('cancel_continuation_request') }}">
+        <button class="btn btn-outline" type="submit">Anfrage abbrechen und neu anmelden</button>
+      </form>
+    </section>
+  </main>
+  <script>
+    (() => {
+      const message = document.getElementById('continuation-message');
+      let stopped = false;
+      async function poll() {
+        if (stopped) return;
+        try {
+          const response = await fetch('/api/fortsetzung/status', {method: 'POST'});
+          const result = await response.json().catch(() => ({}));
+          if (response.ok && result.status === 'freigegeben') {
+            message.textContent = 'Arbeitsstand freigegeben. Die Lernapp wird geöffnet …';
+            location.replace(result.redirect || '/schueler');
+            return;
+          }
+          if (result.status === 'abgelehnt') {
+            stopped = true;
+            message.textContent = 'Die Anfrage wurde nicht zugeordnet. Bitte sprich kurz mit deiner Lehrkraft.';
+            return;
+          }
+          if (!response.ok && response.status !== 404) {
+            message.textContent = result.error || 'Die Zuordnung wird gleich erneut geprüft.';
+          }
+        } catch (_) {
+          message.textContent = 'Verbindung unterbrochen. Die Zuordnung wird automatisch erneut geprüft.';
+        }
+        setTimeout(poll, 1800);
+      }
+      poll();
+    })();
+  </script>
+</body>
+</html>
