@@ -207,10 +207,28 @@ function renderIservBackups(backups) {
     article.className = 'iserv-backup-item';
     const displayDate = item.created_at ? formatDate(item.created_at) : (formatBackupFilename(item.filename) || formatDate(item.modified));
     const backupName = item.name || 'Sicherung ohne Bezeichnung';
-    article.innerHTML = `<div><strong>${escapeHtml(backupName)}</strong><small>${escapeHtml(iservWorksheetName)} · ${escapeHtml(displayDate)} · ${escapeHtml(formatBytes(item.size))}</small><code>${escapeHtml(item.filename)}</code></div><button class="btn btn-outline" type="button">Prüfen &amp; laden</button>`;
-    article.querySelector('button').addEventListener('click', () => previewAndLoadIservBackup(item.filename));
+    article.innerHTML = `<div><strong>${escapeHtml(backupName)}</strong><small>${escapeHtml(iservWorksheetName)} · ${escapeHtml(displayDate)} · ${escapeHtml(formatBytes(item.size))}</small><code>${escapeHtml(item.filename)}</code></div><div class="request-actions"><button class="btn btn-outline" type="button" data-iserv-load>Prüfen &amp; laden</button><button class="btn btn-danger-outline" type="button" data-iserv-delete>Löschen</button></div>`;
+    article.querySelector('[data-iserv-load]').addEventListener('click', () => previewAndLoadIservBackup(item.filename));
+    article.querySelector('[data-iserv-delete]').addEventListener('click', () => deleteIservBackup(item.filename, backupName));
     list.appendChild(article);
   });
+}
+
+async function deleteIservBackup(filename, backupName) {
+  if (!confirm(`IServ-Sicherung „${backupName}“ endgültig löschen?\n\nDie verschlüsselte Datei wird aus dem IServ-Ordner entfernt und kann danach nicht mehr über dieses Dashboard wiederhergestellt werden.`)) return;
+  setIservNote(`„${backupName}“ wird auf IServ gelöscht …`, 'info');
+  const response = await fetch(`/api/lehrer/iserv/backups/${encodeURIComponent(filename)}`, {
+    method: 'DELETE',
+    headers: headers(),
+    body: JSON.stringify({confirmed: true})
+  });
+  const result = await responseJson(response);
+  if (!response.ok || !result.ok) {
+    setIservNote(result.error || 'Die IServ-Sicherung konnte nicht gelöscht werden.', 'error');
+    return showToast(result.error || 'IServ-Sicherung konnte nicht gelöscht werden.', 'error');
+  }
+  showToast(`„${result.deleted?.name || backupName}“ wurde auf IServ gelöscht.`);
+  await loadIservBackups();
 }
 
 async function previewAndLoadIservBackup(filename) {

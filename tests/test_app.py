@@ -374,6 +374,14 @@ class LaborgeraeteAppTest(unittest.TestCase):
                     "snapshot": remote_snapshot,
                 }
 
+            def delete_snapshot(self, remote_name, expected_app_id):
+                self.deleted = (remote_name, expected_app_id)
+                return {
+                    "ok": True,
+                    "filename": remote_name,
+                    "name": "7a Stunde 1",
+                }
+
         service = FakeIservService()
         remote_name = "20260821T120000Z_abcdef123456.iabackup"
         with patch.object(core, "make_iserv_service", return_value=service):
@@ -413,10 +421,31 @@ class LaborgeraeteAppTest(unittest.TestCase):
             self.assertEqual(loaded.status_code, 200)
             self.assertTrue(loaded.get_json()["temporary_server_restore"])
 
+            unconfirmed_delete = self.teacher.delete(
+                f"/api/lehrer/iserv/backups/{remote_name}", headers=headers
+            )
+            self.assertEqual(unconfirmed_delete.status_code, 400)
+
+            deleted = self.teacher.delete(
+                f"/api/lehrer/iserv/backups/{remote_name}",
+                json={"confirmed": True},
+                headers=headers,
+            )
+            self.assertEqual(deleted.status_code, 200)
+            self.assertEqual(service.deleted, (remote_name, core.APP_ID))
+
         state = self.teacher.get("/api/lehrer/state", headers=headers).get_json()
         self.assertEqual(state["students"][0]["pseudonym"], "Neonfuchs")
         self.assertEqual(state["students"][0]["autosave_revision"], 1)
         self.assertEqual(state["snapshots"], [])
+
+    def test_student_script_contains_explicit_positive_answer_feedback(self):
+        response = self.student.get("/static/js/app.js")
+        try:
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("Deine Antwort war richtig!", response.get_data(as_text=True))
+        finally:
+            response.close()
 
     def test_failed_iserv_verification_keeps_all_server_data(self):
         self.login_student(self.student)

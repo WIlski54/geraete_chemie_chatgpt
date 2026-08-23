@@ -431,3 +431,17 @@ class IservBackupService:
         if not isinstance(envelope.get("snapshot"), dict):
             raise IservPayloadError("Die Sicherung enthält keinen gültigen Snapshot.")
         return envelope
+
+    def delete_snapshot(self, remote_name: str, expected_app_id: str) -> dict:
+        """Delete one verified backup belonging to the expected worksheet."""
+        envelope = self.download_snapshot(remote_name, expected_app_id)
+        response = self._request("DELETE", self._file_url(remote_name))
+        if response.status_code not in {200, 202, 204}:
+            raise IservConnectionError(
+                f"IServ konnte die Sicherung nicht löschen (HTTP {response.status_code})."
+            )
+        return {
+            "ok": True,
+            "filename": validate_remote_name(remote_name),
+            "name": str(envelope.get("name", "Unterrichtssitzung"))[:80],
+        }

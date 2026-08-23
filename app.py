@@ -1556,6 +1556,23 @@ def load_iserv_backup(remote_name):
     )
 
 
+@app.delete("/api/lehrer/iserv/backups/<remote_name>")
+@teacher_api_required
+def delete_iserv_backup(remote_name):
+    data = request.get_json(silent=True) or {}
+    if data.get("confirmed") is not True:
+        return jsonify(
+            {"ok": False, "error": "Das endgültige Löschen wurde nicht bestätigt."}
+        ), 400
+    try:
+        deleted = make_iserv_service().delete_snapshot(remote_name, APP_ID)
+        return jsonify({"ok": True, "deleted": deleted})
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 422
+    except IservBackupError as exc:
+        return iserv_error_response(exc)
+
+
 @socketio.on("schueler_join")
 def on_student_join(_data=None):
     student_id = session.get("schueler_id")

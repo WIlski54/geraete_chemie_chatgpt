@@ -182,6 +182,34 @@ class IservWebDavTest(unittest.TestCase):
         requested_urls = [url for _method, url, _kwargs in fake.calls]
         self.assertFalse(any(foreign in url for url in requested_urls))
 
+    def test_delete_verifies_worksheet_before_webdav_delete(self):
+        filename = "20260823T120000Z_abcdef123456.iabackup"
+        config = backup.IservConfig.from_env(valid_environment())
+        envelope = {
+            "format": backup.BACKUP_FORMAT,
+            "schema_version": backup.BACKUP_SCHEMA_VERSION,
+            "app_id": "chemie-test",
+            "name": "7a · Laborgeräte",
+            "created_at": "2026-08-23T12:00:00Z",
+            "snapshot": {"schueler": []},
+        }
+        encrypted = backup.encrypt_envelope(envelope, config.master_key)
+        fake = FakeSession(FakeResponse(200, encrypted), FakeResponse(204))
+        service = backup.IservBackupService(config, session=fake)
+
+        deleted = service.delete_snapshot(filename, "chemie-test")
+
+        self.assertEqual(deleted["name"], "7a · Laborgeräte")
+        self.assertEqual([call[0] for call in fake.calls], ["GET", "DELETE"])
+
+        foreign = dict(envelope, app_id="chemie-redox")
+        foreign_payload = backup.encrypt_envelope(foreign, config.master_key)
+        foreign_fake = FakeSession(FakeResponse(200, foreign_payload))
+        foreign_service = backup.IservBackupService(config, session=foreign_fake)
+        with self.assertRaises(backup.IservPayloadError):
+            foreign_service.delete_snapshot(filename, "chemie-test")
+        self.assertEqual([call[0] for call in foreign_fake.calls], ["GET"])
+
 
 if __name__ == "__main__":
     unittest.main()

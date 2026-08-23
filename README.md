@@ -56,6 +56,11 @@ Die Anwendung legt den Zielordner absichtlich nicht selbst an. Der vorbereitete
 Ordner muss über WebDAV erreichbar und für den konfigurierten Account beschreibbar
 sein. Über „Verbindung testen“ lässt sich das ohne Schülerdaten prüfen.
 
+Das Lehrer-Dashboard kann die verschlüsselten Sicherungen dieses Arbeitsblatts
+auflisten, prüfen, laden und nach einer ausdrücklichen Bestätigung auch endgültig
+von IServ löschen. Vor dem Löschen entschlüsselt und validiert das Backend die
+Datei; Sicherungen anderer Arbeitsblätter im selben Ordner bleiben unberührt.
+
 Der Abschlussknopf fordert zunächst alle aktuell erreichbaren Schülergeräte zu
 einem letzten Autosave auf. Anschließend wird der vollständige Snapshot mit
 AES-256-GCM verschlüsselt und als `.iabackup` übertragen. Die App lädt genau

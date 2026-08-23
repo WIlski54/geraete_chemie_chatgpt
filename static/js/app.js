@@ -147,7 +147,13 @@ function initTaskSaving() {
       }
       await sendAnswer(task, payload.type, payload.answer, correct, card.dataset.niveau);
       markComplete(task);
-      showFeedback(feedback, correct === false ? 'error' : 'ok', correct === false ? 'Noch nicht passend. Nutze die Geräteübersicht und versuche es erneut.' : 'Antwort gespeichert. Deine Lehrkraft kann sie im Dashboard sehen.');
+      if (correct === true) {
+        showFeedback(feedback, 'ok', 'Deine Antwort war richtig! Sie wurde gespeichert und ist für deine Lehrkraft im Dashboard sichtbar.');
+      } else if (correct === false) {
+        showFeedback(feedback, 'error', 'Deine Antwort war noch nicht richtig. Nutze die Geräteübersicht und versuche es erneut.');
+      } else {
+        showFeedback(feedback, 'ok', 'Antwort gespeichert. Deine Lehrkraft kann sie im Dashboard sehen.');
+      }
     });
   });
   document.querySelectorAll('.ai-text-feedback').forEach(button => {
