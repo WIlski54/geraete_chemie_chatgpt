@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#006AB3">
   <title>Laborgeräte entdecken</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260824a') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260824b') }}">
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
   <script>
     window.MathJax = {tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$','$$'], ['\\[','\\]']]}, svg: {fontCache: 'global'}};
@@ -13,7 +13,7 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" defer></script>
   <script src="{{ url_for('static', filename='vendor/fabric-5.3.0.min.js') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/app.js', v='20260824a') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/app.js', v='20260824b') }}" defer></script>
 </head>
 <body>
   <div class="app-shell">
@@ -97,13 +97,14 @@
 
         <article class="task-card" data-task-num="1" data-niveau="A">
           <header class="task-header"><span class="task-number">1</span><div><span class="eyebrow">Sicher starten</span><h3>Schützen, halten oder messen?</h3></div><select class="niveau-select" aria-label="Niveau Aufgabe 1"><option value="A">🟢 A · Basis</option><option value="B">🟡 B · Standard</option><option value="C">🔴 C · Experte</option></select></header>
-          <div data-n="A">
-            <p>Welches Gerät schützt deine Augen?</p>
+          <div data-n="A" data-random-question="1">
+            <p class="random-question-prompt" id="task1-random-prompt">Welches Gerät schützt deine Augen?</p>
             <div class="choice-grid" data-choice-group="task1A">
               <button class="choice-btn" data-value="Becherglas">Becherglas</button>
               <button class="choice-btn" data-value="Schutzbrille" data-correct="true">Schutzbrille</button>
               <button class="choice-btn" data-value="Spatel">Spatel</button>
             </div>
+            <div class="random-question-toolbar"><button class="btn btn-outline random-question-next" type="button" data-random-next="1">Weitere Zufallsfrage</button><span id="task1-random-status" aria-live="polite">Frage 1</span></div>
           </div>
           <div data-n="B" hidden><p>Nenne je ein Gerät zum <strong>Schützen</strong>, <strong>Messen</strong> und <strong>Erhitzen</strong>.</p><textarea id="task1B" data-backup placeholder="Schützen: …&#10;Messen: …&#10;Erhitzen: …"></textarea></div>
           <div data-n="C" hidden><p>Erkläre, warum ein Becherglas trotz Skala nicht für eine genaue Volumenmessung geeignet ist.</p><textarea id="task1C" data-backup placeholder="Ein Becherglas …"></textarea></div>
@@ -126,7 +127,7 @@
 
         <article class="task-card" data-task-num="3" data-niveau="A">
           <header class="task-header"><span class="task-number">3</span><div><span class="eyebrow">Passend auswählen</span><h3>Welches Gerät brauchst du?</h3></div><select class="niveau-select" aria-label="Niveau Aufgabe 3"><option value="A">🟢 A · Basis</option><option value="B">🟡 B · Standard</option><option value="C">🔴 C · Experte</option></select></header>
-          <div data-n="A"><p>Du möchtest 50 ml Wasser möglichst genau abmessen.</p><div class="choice-grid" data-choice-group="task3A"><button class="choice-btn" data-value="Messzylinder" data-correct="true">Messzylinder</button><button class="choice-btn" data-value="Becherglas">Becherglas</button><button class="choice-btn" data-value="Uhrglas">Uhrglas</button></div></div>
+          <div data-n="A" data-random-question="3"><p class="random-question-prompt" id="task3-random-prompt">Du möchtest 50 ml Wasser möglichst genau abmessen.</p><div class="choice-grid" data-choice-group="task3A"><button class="choice-btn" data-value="Messzylinder" data-correct="true">Messzylinder</button><button class="choice-btn" data-value="Becherglas">Becherglas</button><button class="choice-btn" data-value="Uhrglas">Uhrglas</button></div><div class="random-question-toolbar"><button class="btn btn-outline random-question-next" type="button" data-random-next="3">Weitere Zufallsfrage</button><span id="task3-random-status" aria-live="polite">Frage 1</span></div></div>
           <div data-n="B" hidden><p>Wähle passende Geräte: Wasser abmessen, Pulver aufnehmen, Flüssigkeit in ein schmales Gefäß füllen.</p><textarea id="task3B" data-backup placeholder="Abmessen: …&#10;Pulver: …&#10;Umfüllen: …"></textarea></div>
           <div data-n="C" hidden><p>Plane eine sichere Gerätekette, um eine kleine Menge Salz in Wasser zu lösen, vorsichtig zu erhitzen und danach abkühlen zu lassen.</p><textarea id="task3C" data-backup></textarea></div>
           <div class="task-actions"><button class="btn btn-primary save-task" data-task="3">Antwort speichern</button><button class="btn btn-ai ai-text-feedback" data-task="3">Mit KI besprechen</button></div>

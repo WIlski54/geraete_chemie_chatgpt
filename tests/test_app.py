@@ -629,6 +629,22 @@ class LaborgeraeteAppTest(unittest.TestCase):
         finally:
             response.close()
 
+    def test_basis_tasks_offer_non_repeating_random_device_questions(self):
+        self.login_student(self.student)
+        page = self.student.get("/schueler").get_data(as_text=True)
+        self.assertIn('data-random-next="1"', page)
+        self.assertIn('data-random-next="3"', page)
+        script = self.student.get("/static/js/app.js")
+        try:
+            source = script.get_data(as_text=True)
+            self.assertGreaterEqual(source.count("{id: '1-"), 20)
+            self.assertGreaterEqual(source.count("{id: '3-"), 20)
+            self.assertIn("filter(question => !state.seenIds.includes(question.id))", source)
+            self.assertIn("random_questions:", source)
+            self.assertIn("auswahl-serie", source)
+        finally:
+            script.close()
+
     def test_failed_iserv_verification_keeps_all_server_data(self):
         self.login_student(self.student)
         self.student.post(

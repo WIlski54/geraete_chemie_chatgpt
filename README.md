@@ -6,6 +6,7 @@ Interaktives Chemie-Arbeitsblatt für den Klassenunterricht in Jahrgang 7.
 
 - pseudonymer Schülerzugang mit Datenschutz-/KI-Hinweis
 - A/B/C-differenziertes Einstiegsarbeitsblatt
+- zufällige, wiederholungsarme Basis-Fragenserien zu Funktionen und Einsatz von mehr als 40 Laborgeräten
 - Geräte-Quiz mit Tastatur- und Handschriftmodus
 - objektbasiertes Zeichenlabor mit Auswahl, Verschieben, Formen, Text, Radierer und lehrkraftfreigegebener KI-Bildanalyse
 - tap-basiertes Laborgeräte-Domino

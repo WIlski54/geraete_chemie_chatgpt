@@ -61,10 +61,65 @@ const DEVICES = [
 
 const DRAWING_DEVICES = ['Becherglas', 'Reagenzglas', 'Erlenmeyerkolben', 'Messzylinder', 'Spritzflasche', 'Mörser', 'Gasbrenner', 'Dreifuß'];
 
+const RANDOM_DEVICE_QUESTIONS = {
+  1: [
+    {id: '1-augen', prompt: 'Welches Gerät schützt deine Augen?', correct: 'Schutzbrille', options: ['Becherglas', 'Schutzbrille', 'Spatel']},
+    {id: '1-buerste', prompt: 'Womit reinigst du ein Reagenzglas von innen?', correct: 'Reagenzglasbürste', options: ['Reagenzglasbürste', 'Pipette', 'Tiegelzange']},
+    {id: '1-klammer', prompt: 'Womit hältst du ein Reagenzglas beim vorsichtigen Erhitzen?', correct: 'Reagenzglasklammer', options: ['Stativring', 'Reagenzglasklammer', 'Spatel']},
+    {id: '1-gestell', prompt: 'Worin stehen mehrere Reagenzgläser sicher und aufrecht?', correct: 'Reagenzglasgestell', options: ['Reagenzglasgestell', 'Dreifuß', 'Tondreieck']},
+    {id: '1-spatel', prompt: 'Womit entnimmst du eine kleine Menge Pulver?', correct: 'Spatel', options: ['Spatel', 'Thermometer', 'U-Rohr']},
+    {id: '1-brenner', prompt: 'Welches Gerät erzeugt eine Flamme zum Erhitzen?', correct: 'Gasbrenner', options: ['Gasbrenner', 'Wasserstrahlpumpe', 'Gaswaschflasche']},
+    {id: '1-dreifuss', prompt: 'Welches Gestell steht mit drei Beinen über dem Gasbrenner?', correct: 'Dreifuß', options: ['Stativplatte', 'Dreifuß', 'Reagenzglasgestell']},
+    {id: '1-netz', prompt: 'Was liegt auf dem Dreifuß und verteilt die Wärme unter einem Gefäß?', correct: 'Mineralfasernetz', options: ['Mineralfasernetz', 'Uhrglas', 'Tondreieck']},
+    {id: '1-stativklammer', prompt: 'Welches Teil hält ein Gerät seitlich am Stativ fest?', correct: 'Stativklammer', options: ['Stativklammer', 'Reagenzglasbürste', 'Tiegelzange']},
+    {id: '1-spritzflasche', prompt: 'Womit kannst du gezielt einen dünnen Wasserstrahl abgeben?', correct: 'Spritzflasche', options: ['Spritzflasche', 'Saugflasche', 'Säurekappenflasche']},
+    {id: '1-moerser', prompt: 'Worin werden feste Stoffe mit einem Pistill zerkleinert?', correct: 'Mörser', options: ['Mörser', 'Becherglas', 'Porzellantiegel']},
+    {id: '1-tiegelzange', prompt: 'Womit fasst du einen heißen Porzellantiegel sicher an?', correct: 'Tiegelzange', options: ['Reagenzglasklammer', 'Tiegelzange', 'Spatel']},
+    {id: '1-thermometer', prompt: 'Welches Gerät misst die Temperatur?', correct: 'Thermometer', options: ['Kolbenprober', 'Thermometer', 'Messzylinder']},
+    {id: '1-messzylinder', prompt: 'Welches Gerät misst das Volumen einer Flüssigkeit relativ genau?', correct: 'Messzylinder', options: ['Messzylinder', 'Becherglas', 'Standzylinder']},
+    {id: '1-trichter', prompt: 'Welches Gerät hilft beim Umfüllen in ein Gefäß mit enger Öffnung?', correct: 'Trichter', options: ['Trichter', 'Uhrglas', 'Stativring']},
+    {id: '1-pipette', prompt: 'Womit gibst du kleine Flüssigkeitsmengen tropfenweise ab?', correct: 'Pipette', options: ['Bürette', 'Pipette', 'Spritzflasche']},
+    {id: '1-abdampfschale', prompt: 'In welchem flachen Gefäß lässt man ein Lösungsmittel verdampfen?', correct: 'Abdampfschale', options: ['Uhrglas', 'Abdampfschale', 'Pneumatische Wanne']},
+    {id: '1-uhrglas', prompt: 'Welches flache Glas kann kleine Stoffproben aufnehmen oder ein Becherglas abdecken?', correct: 'Uhrglas', options: ['Uhrglas', 'Mineralfasernetz', 'Porzellanschiffchen']},
+    {id: '1-verbrennung', prompt: 'Womit hält man eine kleine Stoffprobe direkt in eine Flamme?', correct: 'Verbrennungslöffel', options: ['Verbrennungslöffel', 'Spatel', 'Pipette']},
+    {id: '1-tondreieck', prompt: 'Welches Teil trägt einen Porzellantiegel beim starken Erhitzen?', correct: 'Tondreieck', options: ['Tondreieck', 'Dreifuß', 'Stativring']},
+    {id: '1-stativplatte', prompt: 'Welches schwere Teil bildet den sicheren Fuß eines Stativs?', correct: 'Stativplatte', options: ['Stativplatte', 'Stativring', 'Stativmuffe']},
+    {id: '1-stativstange', prompt: 'Welches senkrechte Teil trägt Klammern und Ringe eines Stativs?', correct: 'Stativstange', options: ['Stativstange', 'Bürette', 'Liebigkühler']},
+    {id: '1-stativring', prompt: 'Welches ringförmige Teil kann einen Trichter am Stativ tragen?', correct: 'Stativring', options: ['Stativmuffe', 'Stativring', 'Dreifuß']},
+    {id: '1-stativmuffe', prompt: 'Welches Verbindungsteil befestigt Klammer oder Ring an der Stativstange?', correct: 'Stativmuffe', options: ['Stativmuffe', 'Gummistopfen', 'Reagenzglasklammer']}
+  ],
+  3: [
+    {id: '3-messen', prompt: 'Du möchtest 50 ml Wasser möglichst genau abmessen. Welches Gerät brauchst du?', correct: 'Messzylinder', options: ['Messzylinder', 'Becherglas', 'Uhrglas']},
+    {id: '3-becher', prompt: 'Du möchtest eine Flüssigkeit auffangen, mischen und ungefähr abmessen. Welches Gefäß passt?', correct: 'Becherglas', options: ['Becherglas', 'Bürette', 'Kolbenprober']},
+    {id: '3-erlenmeyer', prompt: 'Du möchtest eine Flüssigkeit durch Schwenken mischen, ohne dass sie leicht herausspritzt. Welches Gefäß passt?', correct: 'Erlenmeyerkolben', options: ['Erlenmeyerkolben', 'Abdampfschale', 'Standzylinder']},
+    {id: '3-rundkolben', prompt: 'Du möchtest eine Flüssigkeit gleichmäßig erhitzen; ein Kolben mit rundem Boden verteilt die Wärme gut. Welchen wählst du?', correct: 'Rundkolben', options: ['Rundkolben', 'Stehkolben', 'Becherglas']},
+    {id: '3-stehkolben', prompt: 'Du brauchst einen Kolben mit flachem Boden, der ohne Halterung auf dem Tisch stehen kann. Welcher passt?', correct: 'Stehkolben', options: ['Spitzkolben', 'Rundkolben', 'Stehkolben']},
+    {id: '3-spitzkolben', prompt: 'Du brauchst für einen Aufbau einen Kolben mit nach unten spitz zulaufendem Boden. Wie heißt er?', correct: 'Spitzkolben', options: ['Spitzkolben', 'Erlenmeyerkolben', 'Stehkolben']},
+    {id: '3-tropftrichter', prompt: 'Du möchtest eine Flüssigkeit kontrolliert und langsam zu einem Versuch geben. Welches Gerät nutzt du?', correct: 'Tropftrichter', options: ['Trichter', 'Tropftrichter', 'Spritzflasche']},
+    {id: '3-filternutsche', prompt: 'Du möchtest einen Feststoff durch Absaugen schnell von einer Flüssigkeit trennen. Welcher Trichter gehört dazu?', correct: 'Filternutsche', options: ['Filternutsche', 'Tropftrichter', 'Trichter']},
+    {id: '3-saugflasche', prompt: 'Du filtrierst mit Unterdruck. Welches dickwandige Gefäß mit seitlichem Anschluss brauchst du?', correct: 'Saugflasche', options: ['Saugflasche', 'Spritzflasche', 'Gaswaschflasche']},
+    {id: '3-gaswaschflasche', prompt: 'Du möchtest ein Gas durch eine Flüssigkeit leiten und dabei waschen. Welches Gerät brauchst du?', correct: 'Gaswaschflasche', options: ['Saugflasche', 'Gaswaschflasche', 'Säurekappenflasche']},
+    {id: '3-wanne', prompt: 'Du möchtest ein Gas über Wasser auffangen. Welche Wanne gehört zum Aufbau?', correct: 'Pneumatische Wanne', options: ['Pneumatische Wanne', 'Abdampfschale', 'Reibschale']},
+    {id: '3-standzylinder', prompt: 'Du möchtest ein Gas in einem hohen Gefäß sammeln und anschließend mit einer Scheibe abdecken. Was brauchst du?', correct: 'Standzylinder', options: ['Messzylinder', 'Standzylinder', 'Reagenzglas']},
+    {id: '3-liebig', prompt: 'Du möchtest heißen Dampf in einem geraden wassergekühlten Rohr wieder verflüssigen. Welches Gerät passt?', correct: 'Liebigkühler', options: ['Liebigkühler', 'U-Rohr', 'Bürette']},
+    {id: '3-schlange', prompt: 'Du brauchst einen Kühler mit einer gewundenen inneren Röhre. Wie heißt er?', correct: 'Schlangenkühler', options: ['Liebigkühler', 'Schlangenkühler', 'Stativstange']},
+    {id: '3-pumpe', prompt: 'Du möchtest mit fließendem Wasser einen Unterdruck zum Absaugen erzeugen. Welches Gerät nutzt du?', correct: 'Wasserstrahlpumpe', options: ['Wasserstrahlpumpe', 'Kolbenprober', 'Gasbrenner']},
+    {id: '3-buerette', prompt: 'Du möchtest bei einer Titration Flüssigkeit sehr genau und dosiert abgeben. Welches Gerät brauchst du?', correct: 'Bürette', options: ['Pipette', 'Bürette', 'Messzylinder']},
+    {id: '3-kolbenprober', prompt: 'Du möchtest das Volumen eines Gases mit einem beweglichen Kolben messen. Welches Gerät passt?', correct: 'Kolbenprober', options: ['Kolbenprober', 'Rundkolben', 'Standzylinder']},
+    {id: '3-tiegel', prompt: 'Du möchtest einen festen Stoff sehr stark erhitzen. Welches hitzefeste Gefäß brauchst du?', correct: 'Porzellantiegel', options: ['Porzellantiegel', 'Uhrglas', 'Becherglas']},
+    {id: '3-schiffchen', prompt: 'Du möchtest eine kleine feste Probe in ein waagerechtes Reaktionsrohr schieben. Welcher Probenträger passt?', correct: 'Porzellanschiffchen', options: ['Porzellanschiffchen', 'Verbrennungslöffel', 'Spatel']},
+    {id: '3-urohr', prompt: 'Du möchtest zwei Seiten eines Gasaufbaus mit einem gebogenen Glasrohr verbinden. Welches Gerät passt?', correct: 'U-Rohr', options: ['U-Rohr', 'Liebigkühler', 'Pipette']},
+    {id: '3-stopfen', prompt: 'Du möchtest ein Gefäß verschließen und trotzdem ein Glasrohr hindurchführen. Was brauchst du?', correct: 'Durchbohrter Gummistopfen', options: ['Durchbohrter Gummistopfen', 'Abdeckscheibe', 'Stativmuffe']},
+    {id: '3-saeure', prompt: 'Du möchtest eine Säure in einer Flasche mit schützender Kappe bereitstellen. Welche Flasche ist dafür gedacht?', correct: 'Säurekappenflasche', options: ['Spritzflasche', 'Säurekappenflasche', 'Gaswaschflasche']}
+  ]
+};
+const randomQuestionStates = new Map();
+
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
   initTaskLevels();
   initChoices();
+  initRandomDeviceQuestions();
   initTaskSaving();
   initReader();
   initQuiz();
@@ -119,12 +174,98 @@ function setTaskNiveau(select) {
 
 function initChoices() {
   document.querySelectorAll('[data-choice-group]').forEach(group => {
-    group.querySelectorAll('.choice-btn').forEach(button => {
-      button.addEventListener('click', () => {
-        group.querySelectorAll('.choice-btn').forEach(item => item.classList.remove('selected', 'correct', 'incorrect'));
-        button.classList.add('selected');
-      });
+    group.addEventListener('click', event => {
+      const button = event.target.closest('.choice-btn');
+      if (!button || !group.contains(button)) return;
+      group.querySelectorAll('.choice-btn').forEach(item => item.classList.remove('selected', 'correct', 'incorrect'));
+      button.classList.add('selected');
+      markAutomaticSaveDirty();
     });
+  });
+}
+
+function shuffled(items) {
+  const result = [...items];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const other = Math.floor(Math.random() * (index + 1));
+    [result[index], result[other]] = [result[other], result[index]];
+  }
+  return result;
+}
+
+function initRandomDeviceQuestions() {
+  Object.entries(RANDOM_DEVICE_QUESTIONS).forEach(([task, pool]) => {
+    const first = pool[Math.floor(Math.random() * pool.length)];
+    randomQuestionStates.set(String(task), {currentId: first.id, seenIds: [first.id]});
+    renderRandomDeviceQuestion(String(task));
+  });
+  document.querySelectorAll('[data-random-next]').forEach(button => {
+    button.addEventListener('click', () => nextRandomDeviceQuestion(button.dataset.randomNext));
+  });
+}
+
+function currentRandomDeviceQuestion(task) {
+  const pool = RANDOM_DEVICE_QUESTIONS[Number(task)] || [];
+  const state = randomQuestionStates.get(String(task));
+  return pool.find(question => question.id === state?.currentId) || pool[0] || null;
+}
+
+function renderRandomDeviceQuestion(task) {
+  const question = currentRandomDeviceQuestion(task);
+  const state = randomQuestionStates.get(String(task));
+  const pool = RANDOM_DEVICE_QUESTIONS[Number(task)] || [];
+  const section = document.querySelector(`[data-task-num="${task}"] [data-random-question="${task}"]`);
+  if (!question || !state || !section) return;
+  section.dataset.questionId = question.id;
+  section.dataset.questionPrompt = question.prompt;
+  const prompt = document.getElementById(`task${task}-random-prompt`);
+  const status = document.getElementById(`task${task}-random-status`);
+  const group = section.querySelector('[data-choice-group]');
+  prompt.textContent = question.prompt;
+  status.textContent = `${state.seenIds.length} von ${pool.length} Fragen in dieser Runde`;
+  group.replaceChildren(...shuffled(question.options).map(option => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'choice-btn';
+    button.dataset.value = option;
+    if (option === question.correct) button.dataset.correct = 'true';
+    button.textContent = option;
+    return button;
+  }));
+}
+
+function nextRandomDeviceQuestion(task) {
+  const key = String(task);
+  const pool = RANDOM_DEVICE_QUESTIONS[Number(task)] || [];
+  const state = randomQuestionStates.get(key);
+  if (!state || !pool.length) return;
+  let candidates = pool.filter(question => !state.seenIds.includes(question.id));
+  if (!candidates.length) {
+    state.seenIds = [];
+    candidates = pool.filter(question => question.id !== state.currentId);
+    showToast('Alle Gerätefragen waren einmal dran. Die Runde wird neu gemischt.', 'info');
+  }
+  const next = candidates[Math.floor(Math.random() * candidates.length)] || pool[0];
+  state.currentId = next.id;
+  state.seenIds.push(next.id);
+  renderRandomDeviceQuestion(key);
+  const feedback = document.getElementById(`feedback-task${key}`);
+  feedback.className = 'feedback-box';
+  feedback.textContent = '';
+  markAutomaticSaveDirty();
+}
+
+function restoreRandomDeviceQuestions(saved = {}) {
+  Object.entries(RANDOM_DEVICE_QUESTIONS).forEach(([task, pool]) => {
+    const incoming = saved[task] || {};
+    const validIds = new Set(pool.map(question => question.id));
+    const currentId = validIds.has(incoming.current_id) ? incoming.current_id : randomQuestionStates.get(task)?.currentId;
+    const seenIds = [...new Set((incoming.seen_ids || []).filter(id => validIds.has(id)))];
+    randomQuestionStates.set(task, {
+      currentId: currentId || pool[0].id,
+      seenIds: seenIds.includes(currentId) ? seenIds : [...seenIds, currentId].filter(Boolean)
+    });
+    renderRandomDeviceQuestion(task);
   });
 }
 
@@ -146,7 +287,7 @@ function initTaskSaving() {
         selected.classList.add(correct ? 'correct' : 'incorrect');
       }
       await sendAnswer(task, payload.type, payload.answer, correct, card.dataset.niveau);
-      markComplete(task);
+      if (correct !== false) markComplete(task);
       if (correct === true) {
         showFeedback(feedback, 'ok', 'Deine Antwort war richtig! Sie wurde gespeichert und ist für deine Lehrkraft im Dashboard sichtbar.');
       } else if (correct === false) {
@@ -165,7 +306,14 @@ function serializeTask(card) {
   const level = card.dataset.niveau;
   const section = card.querySelector(`[data-n="${level}"]`);
   const selected = section.querySelector('.choice-btn.selected');
-  if (selected) return {answer: selected.dataset.value || selected.textContent.trim(), type: 'auswahl'};
+  if (selected) {
+    const value = selected.dataset.value || selected.textContent.trim();
+    const prompt = section.dataset.questionPrompt;
+    return {
+      answer: prompt ? `${prompt} → ${value}` : value,
+      type: prompt ? 'auswahl-serie' : 'auswahl'
+    };
+  }
   const fields = [...section.querySelectorAll('textarea, input, select')];
   const answer = fields.map(field => {
     const label = field.closest('label')?.childNodes[0]?.textContent?.trim();
@@ -1307,6 +1455,12 @@ function collectBackup({compact = false} = {}) {
     fields,
     structured_fields: Object.fromEntries(Object.entries(fields).filter(([id]) => id.startsWith('task2A-'))),
     selected_options: choices,
+    random_questions: Object.fromEntries(
+      [...randomQuestionStates.entries()].map(([task, state]) => [task, {
+        current_id: state.currentId,
+        seen_ids: [...state.seenIds]
+      }])
+    ),
     quiz: {score: quizScore, round: quizRound, device: DEVICES[quizIndex].name},
     domino: {placed: dominoPlaced.map(item => item.id), remaining: dominoRemaining.map(item => item.id)},
     drawings: {
@@ -1356,6 +1510,7 @@ async function applyBackupData(data, {automatic = false} = {}) {
       const select = card?.querySelector('.niveau-select');
       if (select && ['A','B','C'].includes(level)) { select.value = level; setTaskNiveau(select); }
     });
+    restoreRandomDeviceQuestions(data.random_questions || {});
     Object.entries(data.selected_options || {}).forEach(([groupName, value]) => {
       const group = document.querySelector(`[data-choice-group="${groupName}"]`);
       group?.querySelectorAll('.choice-btn').forEach(button => button.classList.toggle('selected', button.dataset.value === value));
