@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#006AB3">
   <title>Laborgeräte entdecken</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260824c') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260824d') }}">
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
   <script>
     window.MathJax = {tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$','$$'], ['\\[','\\]']]}, svg: {fontCache: 'global'}};
@@ -13,7 +13,7 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" defer></script>
   <script src="{{ url_for('static', filename='vendor/fabric-5.3.0.min.js') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/app.js', v='20260824c') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/app.js', v='20260824d') }}" defer></script>
 </head>
 <body>
   <div class="app-shell">
@@ -43,10 +43,10 @@
 
     <nav class="tab-bar" aria-label="Bereiche">
       <button class="tab-btn active" data-tab="material" aria-selected="true"><span>01</span> Material</button>
-      <button class="tab-btn" data-tab="start" aria-selected="false"><span>02</span> Einstieg</button>
-      <button class="tab-btn" data-tab="quiz" aria-selected="false"><span>03</span> Geräte-Quiz</button>
-      <button class="tab-btn" data-tab="drawing" aria-selected="false"><span>04</span> Zeichenlabor</button>
-      <button class="tab-btn" data-tab="domino" aria-selected="false"><span>05</span> Domino</button>
+      <button class="tab-btn" data-tab="start" data-unlock-requires="M" aria-selected="false"><span>02</span> Einstieg</button>
+      <button class="tab-btn" data-tab="quiz" data-unlock-requires="1,2,3" aria-selected="false"><span>03</span> Geräte-Quiz</button>
+      <button class="tab-btn" data-tab="drawing" data-unlock-requires="Q" aria-selected="false"><span>04</span> Zeichenlabor</button>
+      <button class="tab-btn" data-tab="domino" data-unlock-requires="Z" aria-selected="false"><span>05</span> Domino</button>
       <button class="tab-btn" data-tab="backup" aria-selected="false"><span>06</span> Sicherung</button>
     </nav>
 
@@ -70,9 +70,9 @@
               <div class="intro-copy">
                 <span class="intro-chapter">1 · Chemie beginnt mit Stoffen</span>
                 <h3>Auch ein Laborgerät besteht aus Stoffen</h3>
-                <p>Chemie ist die Wissenschaft von den <strong>Stoffen</strong>: Chemikerinnen und Chemiker untersuchen, woraus Stoffe bestehen, welche Eigenschaften sie haben und wie sie sich verändern. Im Unterricht schauen wir deshalb nicht nur auf Wasser, Salz oder Metalle. Auch jedes Laborgerät selbst besteht aus einem oder mehreren Stoffen.</p>
-                <p>Diese Stoffe müssen zur Aufgabe passen. Ein Gefäß für eine heiße Flüssigkeit muss Wärme aushalten. Ein Messgerät braucht eine Form, an der man genau ablesen kann. Eine Halterung soll stabil sein, und eine Schutzbrille darf beim Herunterfallen nicht sofort zerbrechen. Außerdem darf das Material möglichst nicht mit dem untersuchten Stoff reagieren.</p>
-                <p>Es gibt also nicht <em>den einen besten Werkstoff</em>. Entscheidend ist immer die Frage: <strong>Welche Eigenschaften werden für diesen Versuch gebraucht?</strong> Darum sehen Laborgeräte so unterschiedlich aus und bestehen aus Glas, Porzellan, Metall, Kunststoff, Gummi oder aus einer Kombination mehrerer Materialien.</p>
+                <p>Chemie ist die Wissenschaft von den <strong>Stoffen</strong>. Chemikerinnen und Chemiker untersuchen drei wichtige Fragen: Woraus besteht ein Stoff? Welche Eigenschaften hat er? Wie kann er sich verändern? Im Unterricht schauen wir deshalb nicht nur auf Wasser, Salz oder Metalle. Auch jedes Laborgerät besteht aus einem oder mehreren Stoffen.</p>
+                <p>Der Stoff eines Geräts muss zu seiner Aufgabe passen. Ein Gefäß für eine heiße Flüssigkeit muss Hitze aushalten. Ein Messgerät braucht eine Form, an der man genau ablesen kann. Eine Halterung soll fest und stabil sein. Eine Schutzbrille darf beim Herunterfallen nicht sofort zerbrechen. Außerdem soll das Material möglichst nicht mit dem Stoff reagieren, den wir untersuchen.</p>
+                <p>Es gibt also nicht <em>den einen besten Werkstoff</em>. Wir fragen immer: <strong>Welche Eigenschaften brauchen wir für diesen Versuch?</strong> Darum sehen Laborgeräte so unterschiedlich aus. Sie bestehen aus Glas, Porzellan, Metall, Kunststoff, Gummi oder aus mehreren Materialien zusammen.</p>
               </div>
               <figure class="intro-feature-image"><img src="{{ url_for('static', filename='img/Geräte/Kiste.jpg') }}" alt="Materialkiste mit Laborgeräten aus unterschiedlichen Werkstoffen"><figcaption>Viele Aufgaben – viele Formen und Werkstoffe</figcaption></figure>
             </article>
@@ -80,10 +80,10 @@
             <article class="material-intro-slide" data-intro-index="1" hidden>
               <div class="intro-copy">
                 <span class="intro-chapter">2 · Glas</span>
-                <h3>Durchsichtig, gut formbar und häufig beständig</h3>
-                <p>Viele Laborgeräte bestehen aus Glas: Reagenzgläser, Bechergläser, Kolben, Pipetten und Messzylinder. Glas ist <strong>durchsichtig</strong>. Dadurch kann man beobachten, ob sich ein Stoff löst, ein Gas entsteht, sich eine Farbe verändert oder sich zwei Flüssigkeitsschichten bilden. Glas lässt sich bei der Herstellung außerdem zu Röhren, Kolben, Hälsen und Ausgüssen formen.</p>
-                <p>Für hitzebelastete Geräte wird meist besonders temperaturbeständiges Laborglas verwendet. Es hält viele Chemikalien aus und lässt sich gut reinigen. Trotzdem ist Glas nicht unzerstörbar: Es ist spröde, kann bei einem Stoß brechen und bei zu schneller oder ungleichmäßiger Erwärmung springen. Nicht jedes Glasgerät darf erhitzt werden. Ein Messzylinder ist beispielsweise zum Messen gebaut, nicht als Kochgefäß.</p>
-                <p>Vor einem Versuch prüft man Glas deshalb auf Risse und abgesplitterte Kanten. Heißes Glas sieht genauso aus wie kaltes Glas – auch das macht vorsichtiges Arbeiten notwendig.</p>
+                <h3>Durchsichtig, gut formbar und oft widerstandsfähig</h3>
+                <p>Viele Laborgeräte bestehen aus Glas: Reagenzgläser, Bechergläser, Kolben, Pipetten und Messzylinder. Glas ist <strong>durchsichtig</strong>. So kannst du beobachten: Löst sich ein Stoff? Entsteht ein Gas? Verändert sich eine Farbe? Bilden sich zwei Schichten aus Flüssigkeiten? Bei der Herstellung kann heißes, weiches Glas außerdem zu Röhren, Kolben, Hälsen und Ausgüssen geformt werden.</p>
+                <p>Für Geräte, die erhitzt werden, nimmt man meist besonderes Laborglas. Es hält Temperaturwechsel besser aus, reagiert mit vielen Chemikalien nicht und lässt sich gut reinigen. Trotzdem ist Glas nicht unzerstörbar. Es ist <strong>spröde</strong>: Es ist hart, kann bei einem Stoß aber brechen. Bei zu schnellem oder ungleichmäßigem Erwärmen kann es springen. Nicht jedes Glasgerät darf erhitzt werden. Ein Messzylinder ist zum Messen gebaut und nicht als Kochgefäß.</p>
+                <p>Vor einem Versuch prüfst du Glas deshalb auf Risse und abgesplitterte Kanten. Wichtig ist auch: Heißes Glas sieht genauso aus wie kaltes Glas. Darum musst du immer vorsichtig arbeiten.</p>
               </div>
               <div class="intro-device-gallery" aria-label="Laborgeräte aus Glas">
                 <figure><img src="{{ url_for('static', filename='img/Geräte/Becherglas.png') }}" alt="Becherglas aus Glas"><figcaption>Becherglas</figcaption></figure>
@@ -96,8 +96,8 @@
               <div class="intro-copy">
                 <span class="intro-chapter">3 · Porzellan und Keramik</span>
                 <h3>Hart und stark bei großer Hitze</h3>
-                <p>Porzellan und andere keramische Stoffe sind hart, formstabil und sehr hitzebeständig. Ein <strong>Porzellantiegel</strong> kann deshalb zum starken Erhitzen kleiner Feststoffmengen verwendet werden. In einer <strong>Abdampfschale</strong> kann eine Lösung vorsichtig erhitzt werden, bis das Lösungsmittel verdampft ist.</p>
-                <p>Auch der Mörser besteht häufig aus Porzellan. Seine harte, leicht raue Innenfläche hilft dabei, feste Stoffe mit dem Pistill zu zerkleinern. Porzellan ist jedoch nicht durchsichtig und trotz seiner Härte spröde: Ein Tiegel kann beim Herunterfallen zerbrechen. Heiße Porzellangeräte werden mit einer geeigneten Zange angefasst und zum Abkühlen auf eine sichere Unterlage gestellt.</p>
+                <p>Porzellan gehört zu den keramischen Stoffen. Es ist hart, behält auch bei großer Hitze seine Form und hält sehr hohe Temperaturen aus. Deshalb kann man in einem <strong>Porzellantiegel</strong> kleine Mengen eines Feststoffs stark erhitzen. In einer <strong>Abdampfschale</strong> wird eine Lösung vorsichtig erhitzt. Dabei verdampft das Lösungsmittel – zum Beispiel das Wasser aus einer Salzlösung.</p>
+                <p>Auch ein Mörser besteht oft aus Porzellan. Seine harte und etwas raue Innenfläche hilft dabei, feste Stoffe mit dem Pistill zu zerkleinern. Porzellan ist aber nicht durchsichtig. Trotz seiner Härte ist es spröde und kann beim Herunterfallen zerbrechen. Heiße Geräte aus Porzellan fasst du mit einer passenden Zange an. Zum Abkühlen stellst du sie auf eine sichere Unterlage.</p>
               </div>
               <div class="intro-device-gallery" aria-label="Laborgeräte aus Porzellan">
                 <figure><img src="{{ url_for('static', filename='img/Geräte/Tiegel.png') }}" alt="Porzellantiegel"><figcaption>Porzellantiegel</figcaption></figure>
@@ -110,9 +110,9 @@
               <div class="intro-copy">
                 <span class="intro-chapter">4 · Metalle</span>
                 <h3>Stabil, belastbar und wärmeleitend</h3>
-                <p>Metalle findet man überall dort, wo Geräte Kräfte aushalten oder andere Teile sicher tragen müssen. Stativstange, Muffe, Klammer und Ring bilden zusammen eine stabile Halterung. Auch Tiegelzangen, Spatel und viele Teile eines Gasbrenners bestehen aus Metall.</p>
-                <p>Metalle sind meist fest und zäh. Sie lassen sich zu dünnen Stangen, Blechen, Federn oder Greifbacken formen. Viele Metalle leiten Wärme allerdings sehr gut. Eine Zange kann daher an der Spitze heiß werden, obwohl ihr Griff zunächst kühl erscheint. Metallteile in der Nähe einer Flamme werden grundsätzlich vorsichtig behandelt.</p>
-                <p>Auch bei Metallen gibt es Unterschiede. Manche Legierungen rosten weniger, andere sind besonders hart oder halten hohe Temperaturen aus. Die genaue Metallsorte wird passend zur Aufgabe gewählt.</p>
+                <p>Metalle werden dort gebraucht, wo Geräte viel aushalten oder andere Teile sicher tragen müssen. Stativstange, Muffe, Klammer und Ring bilden zusammen eine stabile Halterung. Auch Tiegelzangen, Spatel und viele Teile eines Gasbrenners bestehen aus Metall.</p>
+                <p>Metalle sind meistens fest und zäh. Sie lassen sich zum Beispiel zu dünnen Stangen, Blechen, Federn oder Greifbacken formen. Viele Metalle leiten Wärme aber sehr gut. Darum kann die Spitze einer Zange schon heiß sein, obwohl sich der Griff noch kühl anfühlt. Metallteile in der Nähe einer Flamme behandelst du immer vorsichtig.</p>
+                <p>Metalle haben nicht alle dieselben Eigenschaften. Oft mischt man mehrere Metalle. Eine solche Mischung nennt man <strong>Legierung</strong>. Manche Legierungen rosten weniger. Andere sind besonders hart oder halten hohe Temperaturen aus. Deshalb wird die genaue Metallsorte passend zur Aufgabe gewählt.</p>
               </div>
               <div class="intro-device-gallery" aria-label="Laborgeräte aus Metall">
                 <figure><img src="{{ url_for('static', filename='img/Geräte/Stativ.png') }}" alt="Stativ aus Metall"><figcaption>Stativ</figcaption></figure>
@@ -125,9 +125,9 @@
               <div class="intro-copy">
                 <span class="intro-chapter">5 · Kunststoff, Gummi und Verbundstoffe</span>
                 <h3>Leicht, elastisch oder besonders schützend</h3>
-                <p>Kunststoffe sind häufig leicht, bruchfest und gut formbar. Eine Spritzflasche lässt sich zusammendrücken; dadurch wird Wasser durch das gebogene Rohr herausgepresst. Schutzbrillen bestehen oft aus durchsichtigem Kunststoff, weil dieser leichter und stoßfester als gewöhnliches Glas sein kann.</p>
-                <p>Gummi ist elastisch und kann Öffnungen abdichten. Durchbohrte Gummistopfen verschließen ein Gefäß und halten gleichzeitig ein Glasrohr. Auch Schläuche müssen beweglich und dicht sein. Doch Kunststoffe und Gummi vertragen nicht automatisch jede Chemikalie und keine beliebig hohe Temperatur. Sie dürfen deshalb nicht ohne Prüfung erhitzt oder mit jedem Stoff in Kontakt gebracht werden.</p>
-                <p>Manche Bauteile sind <strong>Verbundstoffe</strong>: In ihnen werden mehrere Stoffe so kombiniert, dass ihre Eigenschaften zusammenwirken. Beim Mineralfasernetz sorgt beispielsweise ein Metallgitter für Halt, während die hitzebeständige Auflage die Wärme verteilt.</p>
+                <p>Kunststoffe sind oft leicht, bruchfest und gut formbar. Eine Spritzflasche lässt sich zusammendrücken. Dadurch wird Wasser durch das gebogene Rohr herausgepresst. Schutzbrillen bestehen oft aus durchsichtigem Kunststoff. Dieser kann leichter und stoßfester als gewöhnliches Glas sein.</p>
+                <p>Gummi ist elastisch: Er lässt sich verformen und geht danach wieder in seine alte Form zurück. Außerdem kann Gummi Öffnungen abdichten. Durchbohrte Gummistopfen verschließen ein Gefäß und halten gleichzeitig ein Glasrohr. Auch Schläuche müssen beweglich und dicht sein. Kunststoffe und Gummi vertragen aber nicht automatisch jede Chemikalie und auch keine beliebig hohe Temperatur. Deshalb darfst du sie nicht ohne Prüfung erhitzen oder mit jedem Stoff in Kontakt bringen.</p>
+                <p>Manche Bauteile bestehen aus <strong>Verbundstoffen</strong>. Das bedeutet: Mehrere Stoffe werden so miteinander verbunden, dass ihre Eigenschaften zusammenwirken. Beim Mineralfasernetz gibt ein Metallgitter festen Halt. Die hitzebeständige Auflage verteilt gleichzeitig die Wärme.</p>
               </div>
               <div class="intro-device-gallery intro-device-gallery-two" aria-label="Laborgeräte aus Kunststoff und Gummi">
                 <figure><img src="{{ url_for('static', filename='img/Geräte/Spritzflasche.png') }}" alt="Spritzflasche aus Kunststoff"><figcaption>Spritzflasche</figcaption></figure>
@@ -139,9 +139,9 @@
               <div class="intro-copy">
                 <span class="intro-chapter">6 · Werkstoffe im Team</span>
                 <h3>Ein sicherer Aufbau verbindet passende Eigenschaften</h3>
-                <p>In einem Versuchsaufbau arbeiten meist mehrere Werkstoffe zusammen. Beim Erhitzen kann ein Glasgefäß den Stoff aufnehmen. Ein Metallstativ hält den Aufbau fest. Ein Dreifuß aus Metall trägt ein hitzebeständiges Netz, das die Wärme verteilt. Der Gasbrenner liefert die Flamme. Jedes Teil übernimmt eine andere Aufgabe.</p>
-                <p>Vor dem Aufbau fragt man deshalb: Wird stark erhitzt? Muss man etwas beobachten oder genau messen? Wirkt eine Chemikalie auf das Material ein? Muss ein Teil elastisch, dicht oder besonders stabil sein? Danach werden Form und Werkstoff des Geräts ausgewählt.</p>
-                <p>Diese Auswahl ist selbst Chemie: Wir nutzen bekannte <strong>Stoffeigenschaften</strong>, um sicher und zuverlässig zu experimentieren. Beschädigte Geräte werden nicht benutzt. Wenn du bei einem Material oder einer Verwendung unsicher bist, fragst du die Lehrkraft, bevor du mit dem Versuch beginnst.</p>
+                <p>In einem Versuchsaufbau arbeiten meistens mehrere Werkstoffe zusammen. Beim Erhitzen kann ein Gefäß aus Glas den Stoff aufnehmen. Ein Stativ aus Metall hält den Aufbau fest. Ein Dreifuß aus Metall trägt ein hitzebeständiges Netz, das die Wärme verteilt. Der Gasbrenner liefert die Flamme. Jedes Teil hat eine andere Aufgabe.</p>
+                <p>Vor dem Aufbau klärst du deshalb mehrere Fragen: Wird etwas stark erhitzt? Muss man etwas beobachten oder genau messen? Kann eine Chemikalie das Material angreifen? Muss ein Teil beweglich, dicht oder besonders stabil sein? Danach wählst du die passende Form und den passenden Werkstoff aus.</p>
+                <p>Auch diese Auswahl gehört zur Chemie. Wir nutzen bekannte <strong>Stoffeigenschaften</strong>, damit ein Versuch sicher und zuverlässig funktioniert. Beschädigte Geräte werden nicht benutzt. Wenn du bei einem Material oder bei der Verwendung unsicher bist, fragst du zuerst die Lehrkraft.</p>
               </div>
               <div class="intro-device-gallery" aria-label="Geräte eines Versuchsaufbaus aus verschiedenen Werkstoffen">
                 <figure><img src="{{ url_for('static', filename='img/Geräte/Becherglas.png') }}" alt="Becherglas für den Stoff"><figcaption>Aufnehmen</figcaption></figure>

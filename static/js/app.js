@@ -4,6 +4,12 @@ const META = window.WORKSHEET_META || {};
 const TOTAL_STATIONS = 7;
 const completedTasks = new Set();
 let activeTab = 'material';
+const TAB_LOCK_HINTS = {
+  start: 'Schließe zuerst den Lesepfad im Bereich Material ab.',
+  quiz: 'Bearbeite zuerst alle drei Aufgaben im Einstieg.',
+  drawing: 'Schließe zuerst das Geräte-Quiz ab.',
+  domino: 'Schließe zuerst das Zeichenlabor ab.',
+};
 let quizIndex = 0;
 let quizScore = 0;
 let quizRound = 1;
@@ -199,8 +205,13 @@ function initTabs() {
 }
 
 function switchTab(name) {
+  const button = document.querySelector(`.tab-btn[data-tab="${name}"]`);
+  if (button?.disabled) {
+    showToast(TAB_LOCK_HINTS[name] || 'Dieser Bereich ist noch nicht freigeschaltet.', 'info');
+    return false;
+  }
   const target = document.querySelector(`[data-panel="${name}"]`);
-  if (!target) return;
+  if (!target) return false;
   activeTab = name;
   document.querySelectorAll('.tab-btn').forEach(button => {
     const isActive = button.dataset.tab === name;
@@ -214,6 +225,21 @@ function switchTab(name) {
   });
   window.scrollTo({top: 0, behavior: 'smooth'});
   markAutomaticSaveDirty();
+  return true;
+}
+
+function updateTabLocks() {
+  document.querySelectorAll('.tab-btn').forEach(button => {
+    const required = (button.dataset.unlockRequires || '')
+      .split(',')
+      .map(item => item.trim())
+      .filter(Boolean);
+    const unlocked = required.every(item => completedTasks.has(item));
+    button.disabled = !unlocked;
+    button.classList.toggle('locked', !unlocked);
+    button.setAttribute('aria-disabled', String(!unlocked));
+    button.title = unlocked ? '' : (TAB_LOCK_HINTS[button.dataset.tab] || 'Noch nicht freigeschaltet');
+  });
 }
 
 function initTaskLevels() {
@@ -438,8 +464,14 @@ async function answerMaterialIntroQuestion(option) {
   await sendAnswer(`L${index + 1}`, 'lesepfad-mc', `${item.question} → ${option}`, correct, 'Einführung');
   if (correct) {
     if (!materialIntroState.passedSections.includes(index)) materialIntroState.passedSections.push(index);
-    materialIntroState.phase = 'passed';
+    const finished = index === MATERIAL_INTRO_QUESTIONS.length - 1;
+    materialIntroState.completed = finished;
+    materialIntroState.phase = finished ? 'complete' : 'passed';
     materialIntroState.retryUntil = null;
+    if (finished) {
+      markComplete('M');
+      showToast('Alle Fragen sind richtig. Einstieg und Geräteübersicht sind jetzt frei.', 'ok');
+    }
     renderMaterialIntroduction();
   } else {
     materialIntroState.phase = 'reread';
@@ -621,6 +653,7 @@ function updateProgress() {
   const count = Math.min(TOTAL_STATIONS, completedTasks.size);
   document.getElementById('progress-label').textContent = `${count} von ${TOTAL_STATIONS} Lernstationen`;
   document.getElementById('progress-fill').style.width = `${(count / TOTAL_STATIONS) * 100}%`;
+  updateTabLocks();
 }
 
 function showFeedback(element, type, message) {

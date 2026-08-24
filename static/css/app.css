@@ -56,6 +56,9 @@ a { color: var(--blue); }
 .tab-btn span { color: #71879a; font-size: .68rem; }
 .tab-btn.active { color: #fff; background: var(--blue); box-shadow: 0 5px 12px rgba(0,106,179,.24); }
 .tab-btn.active span { color: #ffd765; }
+.tab-btn.locked { color: #738493; background: rgba(255,255,255,.42); cursor: not-allowed; opacity: .72; }
+.tab-btn.locked::after { content: "🔒"; margin-left: 2px; font-size: .78rem; filter: grayscale(1); }
+.tab-btn.locked:active { transform: none; }
 .tab-panel { min-height: 460px; }
 .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 30px; padding: 12px 4px 14px; }
 .section-heading h2 { margin: 0; font-size: clamp(1.45rem, 3vw, 2rem); }

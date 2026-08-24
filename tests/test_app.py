@@ -660,9 +660,32 @@ class LaborgeraeteAppTest(unittest.TestCase):
             self.assertIn("materialIntroState.phase = 'reread'", source)
             self.assertIn("item.rereadSeconds * 1000", source)
             self.assertIn("materialIntroState.phase = 'question'", source)
+            self.assertIn("materialIntroState.completed = finished", source)
+            self.assertIn("finished ? 'complete' : 'passed'", source)
             self.assertIn("material_intro:", source)
             self.assertIn("restoreMaterialIntroduction(data.material_intro || {})", source)
             self.assertIn("'lesepfad-mc'", source)
+        finally:
+            script.close()
+
+    def test_learning_tabs_unlock_in_sequence_and_backup_stays_available(self):
+        self.login_student(self.student)
+        page = self.student.get("/schueler").get_data(as_text=True)
+        self.assertIn('data-tab="start" data-unlock-requires="M"', page)
+        self.assertIn('data-tab="quiz" data-unlock-requires="1,2,3"', page)
+        self.assertIn('data-tab="drawing" data-unlock-requires="Q"', page)
+        self.assertIn('data-tab="domino" data-unlock-requires="Z"', page)
+        self.assertIn('data-tab="backup" aria-selected="false"', page)
+        self.assertNotIn('data-tab="backup" data-unlock-requires=', page)
+
+        script = self.student.get("/static/js/app.js")
+        try:
+            source = script.get_data(as_text=True)
+            self.assertIn("function updateTabLocks()", source)
+            self.assertIn("required.every(item => completedTasks.has(item))", source)
+            self.assertIn("button.disabled = !unlocked", source)
+            self.assertIn("if (button?.disabled)", source)
+            self.assertIn("updateTabLocks();", source)
         finally:
             script.close()
 
