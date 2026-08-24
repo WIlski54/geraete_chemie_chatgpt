@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#006AB3">
   <title>Laborgeräte entdecken</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260824b') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260824c') }}">
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" defer></script>
   <script>
     window.MathJax = {tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$','$$'], ['\\[','\\]']]}, svg: {fontCache: 'global'}};
@@ -13,7 +13,7 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" defer></script>
   <script src="{{ url_for('static', filename='vendor/fabric-5.3.0.min.js') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/app.js', v='20260824b') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/app.js', v='20260824c') }}" defer></script>
 </head>
 <body>
   <div class="app-shell">
@@ -52,29 +52,155 @@
 
     <main>
       <section class="tab-panel active" id="panel-material" data-panel="material">
-        <div class="section-heading">
-          <div><span class="eyebrow">Originalmaterial</span><h2>Deine Geräteübersicht</h2></div>
-          <p>Öffne die Übersicht erst, wenn du sie brauchst. Sie bleibt beim Start bewusst eingeklappt.</p>
-        </div>
-        <details class="material-card material-disclosure">
-          <summary>
-            <span><small>Arbeitsblatt 1</small><strong>Laborgeräte · Übersicht</strong></span>
-            <span class="disclosure-action"><span class="show-label">Ausklappen</span><span class="hide-label">Einklappen</span><i aria-hidden="true"></i></span>
-          </summary>
-          <div class="material-content">
-            <div class="material-note">PDF und JPG zeigen dieselbe Übersicht. Die Seitenansicht funktioniert zuverlässig auf dem iPad.</div>
-            <div class="material-pages"><img src="{{ url_for('static', filename='material/laborgeraete_uebersicht_1.png') }}" alt="Arbeitsblatt Laborgeräte, Seite 1"></div>
-            <div class="material-actions">
-              <button class="btn btn-primary open-reader"
-                data-reader-title="Arbeitsblatt 1 · Laborgeräte"
-                data-reader-pages='["{{ url_for('static', filename='material/laborgeraete_uebersicht_1.png') }}"]'
-                data-reader-pdf="{{ url_for('static', filename='material/laborgeraete_uebersicht.pdf') }}">Im Fokus-Reader anzeigen</button>
-              <a class="btn btn-outline" href="{{ url_for('static', filename='material/laborgeraete_uebersicht.pdf') }}" target="_blank" rel="noopener">Original-PDF öffnen</a>
-              <a class="btn btn-outline" href="{{ url_for('static', filename='material/laborgeraete_uebersicht_original.jpg') }}" target="_blank" rel="noopener">Original-JPG öffnen</a>
+        <section class="material-introduction" id="material-introduction" aria-labelledby="material-intro-title">
+          <header class="material-intro-header">
+            <div>
+              <span class="eyebrow light">Einführung · Chemie als Stoffwissenschaft</span>
+              <h2 id="material-intro-title">Die Stoffe hinter den Laborgeräten</h2>
+              <p>Warum bestehen Reagenzglas, Tiegel und Stativ nicht aus demselben Material? Lies die sechs Abschnitte aufmerksam und beantworte jeweils eine Verständnisfrage.</p>
             </div>
+            <div class="intro-section-counter" aria-label="Fortschritt im Einführungstext">
+              <strong id="material-intro-section-label">Abschnitt 1 von 6</strong>
+              <span class="intro-progress-track" aria-hidden="true"><i id="material-intro-progress"></i></span>
+            </div>
+          </header>
+
+          <div class="material-intro-stage" id="material-intro-stage">
+            <article class="material-intro-slide" data-intro-index="0">
+              <div class="intro-copy">
+                <span class="intro-chapter">1 · Chemie beginnt mit Stoffen</span>
+                <h3>Auch ein Laborgerät besteht aus Stoffen</h3>
+                <p>Chemie ist die Wissenschaft von den <strong>Stoffen</strong>: Chemikerinnen und Chemiker untersuchen, woraus Stoffe bestehen, welche Eigenschaften sie haben und wie sie sich verändern. Im Unterricht schauen wir deshalb nicht nur auf Wasser, Salz oder Metalle. Auch jedes Laborgerät selbst besteht aus einem oder mehreren Stoffen.</p>
+                <p>Diese Stoffe müssen zur Aufgabe passen. Ein Gefäß für eine heiße Flüssigkeit muss Wärme aushalten. Ein Messgerät braucht eine Form, an der man genau ablesen kann. Eine Halterung soll stabil sein, und eine Schutzbrille darf beim Herunterfallen nicht sofort zerbrechen. Außerdem darf das Material möglichst nicht mit dem untersuchten Stoff reagieren.</p>
+                <p>Es gibt also nicht <em>den einen besten Werkstoff</em>. Entscheidend ist immer die Frage: <strong>Welche Eigenschaften werden für diesen Versuch gebraucht?</strong> Darum sehen Laborgeräte so unterschiedlich aus und bestehen aus Glas, Porzellan, Metall, Kunststoff, Gummi oder aus einer Kombination mehrerer Materialien.</p>
+              </div>
+              <figure class="intro-feature-image"><img src="{{ url_for('static', filename='img/Geräte/Kiste.jpg') }}" alt="Materialkiste mit Laborgeräten aus unterschiedlichen Werkstoffen"><figcaption>Viele Aufgaben – viele Formen und Werkstoffe</figcaption></figure>
+            </article>
+
+            <article class="material-intro-slide" data-intro-index="1" hidden>
+              <div class="intro-copy">
+                <span class="intro-chapter">2 · Glas</span>
+                <h3>Durchsichtig, gut formbar und häufig beständig</h3>
+                <p>Viele Laborgeräte bestehen aus Glas: Reagenzgläser, Bechergläser, Kolben, Pipetten und Messzylinder. Glas ist <strong>durchsichtig</strong>. Dadurch kann man beobachten, ob sich ein Stoff löst, ein Gas entsteht, sich eine Farbe verändert oder sich zwei Flüssigkeitsschichten bilden. Glas lässt sich bei der Herstellung außerdem zu Röhren, Kolben, Hälsen und Ausgüssen formen.</p>
+                <p>Für hitzebelastete Geräte wird meist besonders temperaturbeständiges Laborglas verwendet. Es hält viele Chemikalien aus und lässt sich gut reinigen. Trotzdem ist Glas nicht unzerstörbar: Es ist spröde, kann bei einem Stoß brechen und bei zu schneller oder ungleichmäßiger Erwärmung springen. Nicht jedes Glasgerät darf erhitzt werden. Ein Messzylinder ist beispielsweise zum Messen gebaut, nicht als Kochgefäß.</p>
+                <p>Vor einem Versuch prüft man Glas deshalb auf Risse und abgesplitterte Kanten. Heißes Glas sieht genauso aus wie kaltes Glas – auch das macht vorsichtiges Arbeiten notwendig.</p>
+              </div>
+              <div class="intro-device-gallery" aria-label="Laborgeräte aus Glas">
+                <figure><img src="{{ url_for('static', filename='img/Geräte/Becherglas.png') }}" alt="Becherglas aus Glas"><figcaption>Becherglas</figcaption></figure>
+                <figure><img src="{{ url_for('static', filename='img/Geräte/Erlenmeyerkolben.png') }}" alt="Erlenmeyerkolben aus Glas"><figcaption>Erlenmeyerkolben</figcaption></figure>
+                <figure><img src="{{ url_for('static', filename='img/Geräte/Messzylinder.png') }}" alt="Messzylinder aus Glas"><figcaption>Messzylinder</figcaption></figure>
+              </div>
+            </article>
+
+            <article class="material-intro-slide" data-intro-index="2" hidden>
+              <div class="intro-copy">
+                <span class="intro-chapter">3 · Porzellan und Keramik</span>
+                <h3>Hart und stark bei großer Hitze</h3>
+                <p>Porzellan und andere keramische Stoffe sind hart, formstabil und sehr hitzebeständig. Ein <strong>Porzellantiegel</strong> kann deshalb zum starken Erhitzen kleiner Feststoffmengen verwendet werden. In einer <strong>Abdampfschale</strong> kann eine Lösung vorsichtig erhitzt werden, bis das Lösungsmittel verdampft ist.</p>
+                <p>Auch der Mörser besteht häufig aus Porzellan. Seine harte, leicht raue Innenfläche hilft dabei, feste Stoffe mit dem Pistill zu zerkleinern. Porzellan ist jedoch nicht durchsichtig und trotz seiner Härte spröde: Ein Tiegel kann beim Herunterfallen zerbrechen. Heiße Porzellangeräte werden mit einer geeigneten Zange angefasst und zum Abkühlen auf eine sichere Unterlage gestellt.</p>
+              </div>
+              <div class="intro-device-gallery" aria-label="Laborgeräte aus Porzellan">
+                <figure><img src="{{ url_for('static', filename='img/Geräte/Tiegel.png') }}" alt="Porzellantiegel"><figcaption>Porzellantiegel</figcaption></figure>
+                <figure><img src="{{ url_for('static', filename='img/Geräte/Mörser.png') }}" alt="Mörser und Pistill aus Porzellan"><figcaption>Mörser mit Pistill</figcaption></figure>
+                <figure><img src="{{ url_for('static', filename='img/Geräte/Abdampfschale.png') }}" alt="Abdampfschale aus Porzellan"><figcaption>Abdampfschale</figcaption></figure>
+              </div>
+            </article>
+
+            <article class="material-intro-slide" data-intro-index="3" hidden>
+              <div class="intro-copy">
+                <span class="intro-chapter">4 · Metalle</span>
+                <h3>Stabil, belastbar und wärmeleitend</h3>
+                <p>Metalle findet man überall dort, wo Geräte Kräfte aushalten oder andere Teile sicher tragen müssen. Stativstange, Muffe, Klammer und Ring bilden zusammen eine stabile Halterung. Auch Tiegelzangen, Spatel und viele Teile eines Gasbrenners bestehen aus Metall.</p>
+                <p>Metalle sind meist fest und zäh. Sie lassen sich zu dünnen Stangen, Blechen, Federn oder Greifbacken formen. Viele Metalle leiten Wärme allerdings sehr gut. Eine Zange kann daher an der Spitze heiß werden, obwohl ihr Griff zunächst kühl erscheint. Metallteile in der Nähe einer Flamme werden grundsätzlich vorsichtig behandelt.</p>
+                <p>Auch bei Metallen gibt es Unterschiede. Manche Legierungen rosten weniger, andere sind besonders hart oder halten hohe Temperaturen aus. Die genaue Metallsorte wird passend zur Aufgabe gewählt.</p>
+              </div>
+              <div class="intro-device-gallery" aria-label="Laborgeräte aus Metall">
+                <figure><img src="{{ url_for('static', filename='img/Geräte/Stativ.png') }}" alt="Stativ aus Metall"><figcaption>Stativ</figcaption></figure>
+                <figure><img src="{{ url_for('static', filename='img/Geräte/Stativklammer.png') }}" alt="Stativklammer aus Metall"><figcaption>Stativklammer</figcaption></figure>
+                <figure><img src="{{ url_for('static', filename='img/Geräte/Tigelzange.png') }}" alt="Tiegelzange aus Metall"><figcaption>Tiegelzange</figcaption></figure>
+              </div>
+            </article>
+
+            <article class="material-intro-slide" data-intro-index="4" hidden>
+              <div class="intro-copy">
+                <span class="intro-chapter">5 · Kunststoff, Gummi und Verbundstoffe</span>
+                <h3>Leicht, elastisch oder besonders schützend</h3>
+                <p>Kunststoffe sind häufig leicht, bruchfest und gut formbar. Eine Spritzflasche lässt sich zusammendrücken; dadurch wird Wasser durch das gebogene Rohr herausgepresst. Schutzbrillen bestehen oft aus durchsichtigem Kunststoff, weil dieser leichter und stoßfester als gewöhnliches Glas sein kann.</p>
+                <p>Gummi ist elastisch und kann Öffnungen abdichten. Durchbohrte Gummistopfen verschließen ein Gefäß und halten gleichzeitig ein Glasrohr. Auch Schläuche müssen beweglich und dicht sein. Doch Kunststoffe und Gummi vertragen nicht automatisch jede Chemikalie und keine beliebig hohe Temperatur. Sie dürfen deshalb nicht ohne Prüfung erhitzt oder mit jedem Stoff in Kontakt gebracht werden.</p>
+                <p>Manche Bauteile sind <strong>Verbundstoffe</strong>: In ihnen werden mehrere Stoffe so kombiniert, dass ihre Eigenschaften zusammenwirken. Beim Mineralfasernetz sorgt beispielsweise ein Metallgitter für Halt, während die hitzebeständige Auflage die Wärme verteilt.</p>
+              </div>
+              <div class="intro-device-gallery intro-device-gallery-two" aria-label="Laborgeräte aus Kunststoff und Gummi">
+                <figure><img src="{{ url_for('static', filename='img/Geräte/Spritzflasche.png') }}" alt="Spritzflasche aus Kunststoff"><figcaption>Spritzflasche</figcaption></figure>
+                <figure><img src="{{ url_for('static', filename='img/Geräte/Stopfen.png') }}" alt="Durchbohrte Gummistopfen"><figcaption>Gummistopfen</figcaption></figure>
+              </div>
+            </article>
+
+            <article class="material-intro-slide" data-intro-index="5" hidden>
+              <div class="intro-copy">
+                <span class="intro-chapter">6 · Werkstoffe im Team</span>
+                <h3>Ein sicherer Aufbau verbindet passende Eigenschaften</h3>
+                <p>In einem Versuchsaufbau arbeiten meist mehrere Werkstoffe zusammen. Beim Erhitzen kann ein Glasgefäß den Stoff aufnehmen. Ein Metallstativ hält den Aufbau fest. Ein Dreifuß aus Metall trägt ein hitzebeständiges Netz, das die Wärme verteilt. Der Gasbrenner liefert die Flamme. Jedes Teil übernimmt eine andere Aufgabe.</p>
+                <p>Vor dem Aufbau fragt man deshalb: Wird stark erhitzt? Muss man etwas beobachten oder genau messen? Wirkt eine Chemikalie auf das Material ein? Muss ein Teil elastisch, dicht oder besonders stabil sein? Danach werden Form und Werkstoff des Geräts ausgewählt.</p>
+                <p>Diese Auswahl ist selbst Chemie: Wir nutzen bekannte <strong>Stoffeigenschaften</strong>, um sicher und zuverlässig zu experimentieren. Beschädigte Geräte werden nicht benutzt. Wenn du bei einem Material oder einer Verwendung unsicher bist, fragst du die Lehrkraft, bevor du mit dem Versuch beginnst.</p>
+              </div>
+              <div class="intro-device-gallery" aria-label="Geräte eines Versuchsaufbaus aus verschiedenen Werkstoffen">
+                <figure><img src="{{ url_for('static', filename='img/Geräte/Becherglas.png') }}" alt="Becherglas für den Stoff"><figcaption>Aufnehmen</figcaption></figure>
+                <figure><img src="{{ url_for('static', filename='img/Geräte/Dreifuss.png') }}" alt="Dreifuß als stabile Halterung"><figcaption>Tragen</figcaption></figure>
+                <figure><img src="{{ url_for('static', filename='img/Geräte/Gasbrenner.png') }}" alt="Gasbrenner zum Erhitzen"><figcaption>Erhitzen</figcaption></figure>
+              </div>
+            </article>
           </div>
-        </details>
-        <div class="tip-card"><span aria-hidden="true">🔎</span><div><strong>Forscher-Tipp</strong><p>Suche auf der Übersicht zuerst die Geräte, die du schon aus dem Alltag kennst: Brille, Bürste, Trichter oder Thermometer.</p></div></div>
+
+          <section class="material-intro-question" id="material-intro-question" aria-labelledby="material-intro-question-title" hidden>
+            <span class="eyebrow">Verständnisfrage</span>
+            <h3 id="material-intro-question-title">Frage zum Abschnitt</h3>
+            <p id="material-intro-question-prompt"></p>
+            <div class="intro-mc-options" id="material-intro-options"></div>
+            <div class="feedback-box" id="material-intro-feedback" role="status" aria-live="polite"></div>
+          </section>
+
+          <footer class="material-intro-controls">
+            <div class="intro-retry-status" id="material-intro-retry" hidden>
+              <span aria-hidden="true">◷</span>
+              <span>Nutze den Abschnitt noch einmal in Ruhe.</span>
+              <strong id="material-intro-timer" aria-label="Verbleibende Lesezeit">1:00</strong>
+            </div>
+            <button class="btn btn-primary" id="material-intro-question-button" type="button">Frage zu diesem Abschnitt</button>
+            <button class="btn btn-accent" id="material-intro-next-button" type="button" hidden>Nächsten Abschnitt öffnen</button>
+          </footer>
+        </section>
+
+        <section class="material-overview" id="material-overview" aria-labelledby="material-overview-title">
+          <div class="section-heading">
+            <div><span class="eyebrow">Originalmaterial</span><h2 id="material-overview-title">Deine Geräteübersicht</h2></div>
+            <p>Nach dem Lesepfad kannst du die Übersicht als Nachschlagewerk öffnen.</p>
+          </div>
+          <div class="material-overview-lock" id="material-overview-lock" role="status">
+            <span aria-hidden="true">🔒</span>
+            <div><strong>Noch nicht freigeschaltet</strong><p>Beende zuerst die sechs Abschnitte und ihre Verständnisfragen.</p></div>
+          </div>
+          <div id="material-overview-content" hidden>
+            <details class="material-card material-disclosure" id="laborgeraete-overview-disclosure">
+              <summary>
+                <span><small>Arbeitsblatt 1</small><strong>Laborgeräte · Übersicht</strong></span>
+                <span class="disclosure-action"><span class="show-label">Ausklappen</span><span class="hide-label">Einklappen</span><i aria-hidden="true"></i></span>
+              </summary>
+              <div class="material-content">
+                <div class="material-note">PDF und JPG zeigen dieselbe Übersicht. Die Seitenansicht funktioniert zuverlässig auf dem iPad.</div>
+                <div class="material-pages"><img src="{{ url_for('static', filename='material/laborgeraete_uebersicht_1.png') }}" alt="Arbeitsblatt Laborgeräte, Seite 1"></div>
+                <div class="material-actions">
+                  <button class="btn btn-primary open-reader"
+                    data-reader-title="Arbeitsblatt 1 · Laborgeräte"
+                    data-reader-pages='["{{ url_for('static', filename='material/laborgeraete_uebersicht_1.png') }}"]'
+                    data-reader-pdf="{{ url_for('static', filename='material/laborgeraete_uebersicht.pdf') }}">Im Fokus-Reader anzeigen</button>
+                  <a class="btn btn-outline" href="{{ url_for('static', filename='material/laborgeraete_uebersicht.pdf') }}" target="_blank" rel="noopener">Original-PDF öffnen</a>
+                  <a class="btn btn-outline" href="{{ url_for('static', filename='material/laborgeraete_uebersicht_original.jpg') }}" target="_blank" rel="noopener">Original-JPG öffnen</a>
+                </div>
+              </div>
+            </details>
+            <div class="tip-card"><span aria-hidden="true">🔎</span><div><strong>Forscher-Tipp</strong><p>Suche auf der Übersicht zuerst die Geräte, die du schon aus dem Alltag kennst: Brille, Bürste, Trichter oder Thermometer.</p></div></div>
+          </div>
+        </section>
       </section>
 
       <section class="tab-panel" id="panel-start" data-panel="start" hidden>

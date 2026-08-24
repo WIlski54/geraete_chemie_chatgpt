@@ -645,6 +645,27 @@ class LaborgeraeteAppTest(unittest.TestCase):
         finally:
             script.close()
 
+    def test_material_introduction_gates_sections_with_timed_rereading(self):
+        self.login_student(self.student)
+        page = self.student.get("/schueler").get_data(as_text=True)
+        self.assertIn('id="material-introduction"', page)
+        self.assertEqual(page.count('class="material-intro-slide"'), 6)
+        self.assertIn('id="material-overview-content" hidden', page)
+        self.assertIn("Die Stoffe hinter den Laborgeräten", page)
+        self.assertIn("Chemie ist die Wissenschaft von den", page)
+        script = self.student.get("/static/js/app.js")
+        try:
+            source = script.get_data(as_text=True)
+            self.assertEqual(source.count("rereadSeconds:"), 6)
+            self.assertIn("materialIntroState.phase = 'reread'", source)
+            self.assertIn("item.rereadSeconds * 1000", source)
+            self.assertIn("materialIntroState.phase = 'question'", source)
+            self.assertIn("material_intro:", source)
+            self.assertIn("restoreMaterialIntroduction(data.material_intro || {})", source)
+            self.assertIn("'lesepfad-mc'", source)
+        finally:
+            script.close()
+
     def test_failed_iserv_verification_keeps_all_server_data(self):
         self.login_student(self.student)
         self.student.post(

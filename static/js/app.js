@@ -61,6 +61,63 @@ const DEVICES = [
 
 const DRAWING_DEVICES = ['Becherglas', 'Reagenzglas', 'Erlenmeyerkolben', 'Messzylinder', 'Spritzflasche', 'Mörser', 'Gasbrenner', 'Dreifuß'];
 
+const MATERIAL_INTRO_QUESTIONS = [
+  {
+    question: 'Warum bestehen Laborgeräte aus unterschiedlichen Werkstoffen?',
+    correct: 'Weil die Eigenschaften des Werkstoffs zur jeweiligen Aufgabe passen müssen.',
+    options: [
+      'Weil die Eigenschaften des Werkstoffs zur jeweiligen Aufgabe passen müssen.',
+      'Weil jedes Gerät dadurch automatisch genauer misst.',
+      'Weil ein Laborgerät immer nur aus einem einzigen Stoff bestehen darf.'
+    ],
+    rereadSeconds: 75
+  },
+  {
+    question: 'Welche Eigenschaft macht Glas besonders nützlich, wenn du eine Reaktion beobachten möchtest?',
+    correct: 'Glas ist durchsichtig.',
+    options: ['Glas ist durchsichtig.', 'Glas ist unzerbrechlich.', 'Jedes Glas darf stark erhitzt werden.'],
+    rereadSeconds: 90
+  },
+  {
+    question: 'Welches Gerät eignet sich zum starken Erhitzen einer kleinen Feststoffmenge?',
+    correct: 'Ein Porzellantiegel',
+    options: ['Ein Messzylinder', 'Ein Porzellantiegel', 'Eine Spritzflasche'],
+    rereadSeconds: 60
+  },
+  {
+    question: 'Warum musst du bei Metallteilen in der Nähe einer Flamme besonders vorsichtig sein?',
+    correct: 'Metalle leiten Wärme gut und können auch entfernt von der Flamme heiß werden.',
+    options: [
+      'Metalle leiten Wärme gut und können auch entfernt von der Flamme heiß werden.',
+      'Metalle werden beim Erwärmen grundsätzlich durchsichtig.',
+      'Metalle zerbrechen schon bei einer kleinen Berührung.'
+    ],
+    rereadSeconds: 75
+  },
+  {
+    question: 'Warum eignet sich Kunststoff für viele Spritzflaschen?',
+    correct: 'Er ist leicht, formbar und die Flasche lässt sich zusammendrücken.',
+    options: [
+      'Er ist leicht, formbar und die Flasche lässt sich zusammendrücken.',
+      'Er hält jede Temperatur und jede Chemikalie aus.',
+      'Er leitet Wärme besonders schnell zur Hand.'
+    ],
+    rereadSeconds: 90
+  },
+  {
+    question: 'Wie wählst du Geräte und Werkstoffe für einen Versuchsaufbau aus?',
+    correct: 'Nach den benötigten Eigenschaften, zum Beispiel Hitzebeständigkeit, Stabilität oder Dichtheit.',
+    options: [
+      'Immer nach der auffälligsten Farbe.',
+      'Immer nur danach, welches Gerät am leichtesten ist.',
+      'Nach den benötigten Eigenschaften, zum Beispiel Hitzebeständigkeit, Stabilität oder Dichtheit.'
+    ],
+    rereadSeconds: 75
+  }
+];
+let materialIntroState = {currentIndex: 0, passedSections: [], phase: 'reading', retryUntil: null, completed: false};
+let materialIntroTimer = null;
+
 const RANDOM_DEVICE_QUESTIONS = {
   1: [
     {id: '1-augen', prompt: 'Welches Gerät schützt deine Augen?', correct: 'Schutzbrille', options: ['Becherglas', 'Schutzbrille', 'Spatel']},
@@ -117,6 +174,7 @@ const randomQuestionStates = new Map();
 
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
+  initMaterialIntroduction();
   initTaskLevels();
   initChoices();
   initRandomDeviceQuestions();
@@ -267,6 +325,190 @@ function restoreRandomDeviceQuestions(saved = {}) {
     });
     renderRandomDeviceQuestion(task);
   });
+}
+
+function initMaterialIntroduction() {
+  const root = document.getElementById('material-introduction');
+  if (!root) return;
+  document.getElementById('material-intro-question-button').addEventListener('click', () => {
+    if (materialIntroState.phase !== 'reading') return;
+    materialIntroState.phase = 'question';
+    materialIntroState.retryUntil = null;
+    renderMaterialIntroduction();
+    markAutomaticSaveDirty();
+  });
+  document.getElementById('material-intro-next-button').addEventListener('click', () => {
+    if (materialIntroState.phase === 'complete') {
+      openMaterialOverview();
+      return;
+    }
+    if (materialIntroState.phase !== 'passed') return;
+    if (materialIntroState.currentIndex >= MATERIAL_INTRO_QUESTIONS.length - 1) {
+      materialIntroState.completed = true;
+      materialIntroState.phase = 'complete';
+      markComplete('M');
+      renderMaterialIntroduction();
+      markAutomaticSaveDirty();
+      openMaterialOverview();
+      return;
+    }
+    materialIntroState.currentIndex += 1;
+    materialIntroState.phase = 'reading';
+    materialIntroState.retryUntil = null;
+    renderMaterialIntroduction();
+    markAutomaticSaveDirty();
+    root.scrollIntoView({behavior: 'smooth', block: 'start'});
+  });
+  materialIntroTimer = window.setInterval(tickMaterialIntroTimer, 500);
+  renderMaterialIntroduction();
+}
+
+function renderMaterialIntroduction() {
+  const root = document.getElementById('material-introduction');
+  if (!root) return;
+  const count = MATERIAL_INTRO_QUESTIONS.length;
+  materialIntroState.currentIndex = Math.max(0, Math.min(count - 1, Number(materialIntroState.currentIndex) || 0));
+  const index = materialIntroState.currentIndex;
+  const phase = materialIntroState.phase;
+  const stage = document.getElementById('material-intro-stage');
+  const questionPanel = document.getElementById('material-intro-question');
+  const questionButton = document.getElementById('material-intro-question-button');
+  const nextButton = document.getElementById('material-intro-next-button');
+  const retry = document.getElementById('material-intro-retry');
+  document.getElementById('material-intro-section-label').textContent = materialIntroState.completed
+    ? 'Einführung abgeschlossen'
+    : `Abschnitt ${index + 1} von ${count}`;
+  document.getElementById('material-intro-progress').style.width = materialIntroState.completed
+    ? '100%'
+    : `${((index + 1) / count) * 100}%`;
+  root.querySelectorAll('.material-intro-slide').forEach(slide => {
+    slide.hidden = Number(slide.dataset.introIndex) !== index;
+  });
+
+  const showQuestion = phase === 'question' || phase === 'passed';
+  stage.hidden = showQuestion;
+  questionPanel.hidden = !showQuestion;
+  questionButton.hidden = phase !== 'reading';
+  nextButton.hidden = phase !== 'passed' && phase !== 'complete';
+  retry.hidden = phase !== 'reread';
+  nextButton.textContent = index === count - 1 || phase === 'complete'
+    ? 'Geräteübersicht öffnen'
+    : 'Nächsten Abschnitt öffnen';
+
+  if (showQuestion) renderMaterialIntroQuestion();
+  if (phase === 'reread') updateMaterialIntroTimer();
+  updateMaterialOverviewAccess();
+}
+
+function renderMaterialIntroQuestion() {
+  const item = MATERIAL_INTRO_QUESTIONS[materialIntroState.currentIndex];
+  const prompt = document.getElementById('material-intro-question-prompt');
+  const options = document.getElementById('material-intro-options');
+  const feedback = document.getElementById('material-intro-feedback');
+  prompt.textContent = item.question;
+  options.replaceChildren(...item.options.map(option => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'intro-mc-option';
+    button.textContent = option;
+    button.addEventListener('click', () => answerMaterialIntroQuestion(option));
+    if (materialIntroState.phase === 'passed') {
+      button.disabled = true;
+      if (option === item.correct) button.classList.add('correct');
+    }
+    return button;
+  }));
+  if (materialIntroState.phase === 'passed') {
+    showFeedback(feedback, 'ok', 'Richtig! Du kannst jetzt zum nächsten Abschnitt wechseln.');
+  } else {
+    feedback.className = 'feedback-box';
+    feedback.textContent = '';
+  }
+}
+
+async function answerMaterialIntroQuestion(option) {
+  if (materialIntroState.phase !== 'question') return;
+  const index = materialIntroState.currentIndex;
+  const item = MATERIAL_INTRO_QUESTIONS[index];
+  const correct = option === item.correct;
+  document.querySelectorAll('#material-intro-options .intro-mc-option').forEach(button => {
+    button.disabled = true;
+    if (button.textContent === option) button.classList.add(correct ? 'correct' : 'incorrect');
+  });
+  await sendAnswer(`L${index + 1}`, 'lesepfad-mc', `${item.question} → ${option}`, correct, 'Einführung');
+  if (correct) {
+    if (!materialIntroState.passedSections.includes(index)) materialIntroState.passedSections.push(index);
+    materialIntroState.phase = 'passed';
+    materialIntroState.retryUntil = null;
+    renderMaterialIntroduction();
+  } else {
+    materialIntroState.phase = 'reread';
+    materialIntroState.retryUntil = Date.now() + item.rereadSeconds * 1000;
+    renderMaterialIntroduction();
+    showToast('Noch nicht richtig. Lies den Abschnitt noch einmal aufmerksam.', 'info');
+  }
+  markAutomaticSaveDirty();
+}
+
+function tickMaterialIntroTimer() {
+  if (materialIntroState.phase !== 'reread') return;
+  if ((materialIntroState.retryUntil || 0) <= Date.now()) {
+    materialIntroState.phase = 'question';
+    materialIntroState.retryUntil = null;
+    renderMaterialIntroduction();
+    showFeedback(document.getElementById('material-intro-feedback'), 'info', 'Die Lesezeit ist beendet. Versuche die Frage jetzt noch einmal.');
+    markAutomaticSaveDirty();
+    return;
+  }
+  updateMaterialIntroTimer();
+}
+
+function updateMaterialIntroTimer() {
+  const remaining = Math.max(0, Math.ceil(((materialIntroState.retryUntil || 0) - Date.now()) / 1000));
+  const minutes = Math.floor(remaining / 60);
+  const seconds = String(remaining % 60).padStart(2, '0');
+  const timer = document.getElementById('material-intro-timer');
+  if (timer) timer.textContent = `${minutes}:${seconds}`;
+}
+
+function updateMaterialOverviewAccess() {
+  const lock = document.getElementById('material-overview-lock');
+  const content = document.getElementById('material-overview-content');
+  if (!lock || !content) return;
+  lock.hidden = materialIntroState.completed;
+  content.hidden = !materialIntroState.completed;
+}
+
+function openMaterialOverview() {
+  if (!materialIntroState.completed) return;
+  updateMaterialOverviewAccess();
+  const disclosure = document.getElementById('laborgeraete-overview-disclosure');
+  disclosure.open = true;
+  document.getElementById('material-overview').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+function restoreMaterialIntroduction(saved = {}) {
+  const validPhases = new Set(['reading', 'question', 'reread', 'passed', 'complete']);
+  const count = MATERIAL_INTRO_QUESTIONS.length;
+  const passedSections = [...new Set((saved.passed_sections || [])
+    .map(Number)
+    .filter(index => Number.isInteger(index) && index >= 0 && index < count))];
+  const completed = saved.completed === true || passedSections.length === count;
+  let phase = validPhases.has(saved.phase) ? saved.phase : 'reading';
+  let retryUntil = Number(saved.retry_until) || null;
+  if (completed) phase = 'complete';
+  if (phase === 'reread' && (!retryUntil || retryUntil <= Date.now())) {
+    phase = 'question';
+    retryUntil = null;
+  }
+  materialIntroState = {
+    currentIndex: Math.max(0, Math.min(count - 1, Number(saved.current_index) || 0)),
+    passedSections,
+    phase,
+    retryUntil,
+    completed
+  };
+  renderMaterialIntroduction();
 }
 
 function initTaskSaving() {
@@ -1461,6 +1703,13 @@ function collectBackup({compact = false} = {}) {
         seen_ids: [...state.seenIds]
       }])
     ),
+    material_intro: {
+      current_index: materialIntroState.currentIndex,
+      passed_sections: [...materialIntroState.passedSections],
+      phase: materialIntroState.phase,
+      retry_until: materialIntroState.retryUntil,
+      completed: materialIntroState.completed
+    },
     quiz: {score: quizScore, round: quizRound, device: DEVICES[quizIndex].name},
     domino: {placed: dominoPlaced.map(item => item.id), remaining: dominoRemaining.map(item => item.id)},
     drawings: {
@@ -1511,6 +1760,7 @@ async function applyBackupData(data, {automatic = false} = {}) {
       if (select && ['A','B','C'].includes(level)) { select.value = level; setTaskNiveau(select); }
     });
     restoreRandomDeviceQuestions(data.random_questions || {});
+    restoreMaterialIntroduction(data.material_intro || {});
     Object.entries(data.selected_options || {}).forEach(([groupName, value]) => {
       const group = document.querySelector(`[data-choice-group="${groupName}"]`);
       group?.querySelectorAll('.choice-btn').forEach(button => button.classList.toggle('selected', button.dataset.value === value));

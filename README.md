@@ -5,6 +5,7 @@ Interaktives Chemie-Arbeitsblatt für den Klassenunterricht in Jahrgang 7.
 ## Enthalten
 
 - pseudonymer Schülerzugang mit Datenschutz-/KI-Hinweis
+- sechsteiliger, bildgestützter Lesepfad zu Werkstoffen von Laborgeräten mit Verständnisfragen und zeitgesteuerter Wiederholung
 - A/B/C-differenziertes Einstiegsarbeitsblatt
 - zufällige, wiederholungsarme Basis-Fragenserien zu Funktionen und Einsatz von mehr als 40 Laborgeräten
 - Geräte-Quiz mit Tastatur- und Handschriftmodus
