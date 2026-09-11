@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ info.pseudonym }} · Detail</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/logo-gsm.jpg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v=v) }}">
+  <script src="{{ url_for('static', filename='vendor/socket.io-4.7.5.min.js') }}" defer></script>
+  <script>window.DETAIL = {studentId: {{ info.id|tojson }}, abschnitte: {{ abschnitte|tojson }}, gesperrt: {{ info.ki_gesperrt|tojson }}};</script>
+  <script src="{{ url_for('static', filename='js/detail.js', v=v) }}" defer></script>
+</head>
+<body class="dashboard-page">
+  <header class="dashboard-header">
+    <div class="dashboard-brand"><img src="{{ url_for('static', filename='img/logo-gsm.jpg') }}" alt="GSM"><div><span class="eyebrow light">Schülerdetail · Erster Weltkrieg</span><h1>{{ info.pseudonym }} · Klasse {{ info.klasse }} <span class="pill {{ 'pill-open' if info.online else 'pill-offline' }}" id="online-pill">{{ 'online' if info.online else 'offline' }}</span></h1></div></div>
+    <div class="dashboard-actions">
+      <button class="btn btn-ghost-light btn-sm" id="toggle-ai" type="button">{{ 'KI freigeben' if info.ki_gesperrt else 'KI sperren' }}</button>
+      <a class="btn btn-accent btn-sm" href="{{ url_for('lehrer_dashboard') }}">← Dashboard</a>
+    </div>
+  </header>
+
+  <main class="dashboard-main detail-grid">
+    <section class="dashboard-card span-full">
+      <header class="card-title"><div><span class="eyebrow">Lernfortschritt</span><h2>Aufgaben <span id="progress-count">{{ info.aufgaben_erledigt }}</span> / {{ info.aufgaben_gesamt }}</h2></div><span class="help-text">Farbe = Niveau: grün A · gelb B · rot C · magenta Transfer</span></header>
+      {% for a in abschnitte %}
+      <div class="abschnitt-block">
+        <h3><span>{{ a.kurz }} · {{ a.titel }}</span><span class="abschnitt-chip" id="abschnitt-count-{{ a.key }}">{{ info.abschnitte[a.key].erledigt }}/{{ info.abschnitte[a.key].gesamt }}</span></h3>
+        <div class="tile-grid">
+          {% for nr in a.aufgaben %}{% set nrs = nr|string %}{% set niv = (info.niveaus|selectattr('nr','equalto',nrs)|map(attribute='niveau')|list) %}
+          <div class="tile{{ ' done niv-' ~ niv[-1] if niv else '' }}" id="tile-{{ nrs }}">{{ nrs }}{% if niv %}<small>{{ niv[-1][:1] }}</small>{% endif %}</div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </section>
+
+    <section class="dashboard-card">
+      <header class="card-title"><div><span class="eyebrow">Recherche</span><h2>Stichpunkte &amp; Quellen</h2></div></header>
+      {% for a in abschnitte %}
+      <div class="abschnitt-block" id="notiz-block-{{ a.key }}">
+        <h3><span>{{ a.titel }}</span><span class="help-text" id="notiz-time-{{ a.key }}">{{ notizen[a.key].updated_at[11:16] if a.key in notizen else '–' }}</span></h3>
+        {% if a.key == 'abschluss' %}
+          <div id="notiz-text-abschluss" class="notiz-text">{{ notizen[a.key].stichpunkte if a.key in notizen and notizen[a.key].stichpunkte else 'Noch kein Transfertext.' }}</div>
+          <div id="notiz-quelle-abschluss" class="notiz-quelle-text" data-json="1">{{ notizen[a.key].quellen if a.key in notizen else '' }}</div>
+        {% else %}
+          <pre id="notiz-text-{{ a.key }}" class="notiz-text">{{ notizen[a.key].stichpunkte if a.key in notizen and notizen[a.key].stichpunkte else 'Noch keine Stichpunkte.' }}</pre>
+          <p id="notiz-quelle-{{ a.key }}" class="notiz-quelle-text">{{ ('Quellen: ' ~ notizen[a.key].quellen) if a.key in notizen and notizen[a.key].quellen else 'Quellen: –' }}</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </section>
+
+    <section class="dashboard-card">
+      <header class="card-title"><div><span class="eyebrow">Live-Protokoll</span><h2>Antwortversuche</h2></div><span class="count-badge" id="answer-count">{{ antworten|length }}</span></header>
+      <div id="answer-log" class="answer-log">
+        {% for a in antworten %}
+        <article class="answer-log-item {{ 'is-correct' if a.korrekt == 1 else 'is-wrong' if a.korrekt == 0 else '' }}">
+          <span>{{ '✅' if a.korrekt == 1 else '❌' if a.korrekt == 0 else '📝' }}</span>
+          <div><strong>Aufgabe {{ a.aufgabe_nr }}</strong> <span class="meta">{{ a.antwort_typ }} · Niveau {{ a.niveau }} · Versuch {{ a.versuch_nr }}</span><br>{{ a.antwort_text }}</div>
+          <time>{{ a.erstellt_at[11:16] }}</time>
+        </article>
+        {% else %}<p class="empty-state" id="no-answers">Noch keine Antworten.</p>{% endfor %}
+      </div>
+    </section>
+
+    <section class="dashboard-card">
+      <header class="card-title"><div><span class="eyebrow">KI-Transparenz</span><h2>Live-Chat &amp; KI-Feedback</h2></div><span class="pill {{ 'pill-locked' if info.ki_gesperrt else 'pill-open' }}" id="ki-pill">{{ 'KI gesperrt' if info.ki_gesperrt else 'KI frei' }}</span></header>
+      <p class="help-text">Nur während dieser Stunde sichtbar (nicht gespeichert). Erscheint, sobald die KI antwortet.</p>
+      <div id="request-list" class="request-list">
+        {% for a in anfragen if a.status == 'wartend' %}
+        <div class="request-item" data-id="{{ a.id }}"><span class="request-typ">{{ 'Tutor' if a.typ == 'chat' else 'Feedback' }}</span><div class="who"><strong>{{ a.kontext }}</strong><small>{{ a.erstellt_at[11:16] }}</small></div><button class="btn btn-primary btn-sm" data-decide="freigegeben" data-id="{{ a.id }}" type="button">✅ Freigeben</button><button class="btn btn-danger-outline btn-sm" data-decide="abgelehnt" data-id="{{ a.id }}" type="button">✕</button></div>
+        {% endfor %}
+      </div>
+      <div id="detail-chat" class="detail-chat"><p class="empty-state" id="no-chat">Noch keine KI-Nutzung in dieser Stunde.</p></div>
+      <div class="detail-actions">
+        <button class="btn btn-danger-outline" id="delete-student" type="button">Daten dieses Pseudonyms löschen (DSGVO)</button>
+      </div>
+    </section>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Der Erste Weltkrieg · Interaktives Arbeitsblatt</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/logo-gsm.jpg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v=v) }}">
+  <script src="{{ url_for('static', filename='vendor/socket.io-4.7.5.min.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='vendor/chart-4.4.1.umd.js') }}" defer></script>
+  <script>window.APP = {schuelerId: {{ schueler_id|tojson }}, pseudonym: {{ pseudonym|tojson }}, klasse: {{ klasse|tojson }}, aufgabenGesamt: {{ aufgaben_gesamt }}};</script>
+  <script src="{{ url_for('static', filename='js/inhalte.js', v=v) }}" defer></script>
+  <script src="{{ url_for('static', filename='js/app.js', v=v) }}" defer></script>
+</head>
+<body class="student-page">
+  <div class="app-shell">
+    <header class="ws-header">
+      <div class="header-logos">
+        <img src="{{ url_for('static', filename='img/logo-gsm.jpg') }}" alt="Gesamtschule Meiderich" class="logo-gsm">
+        <div class="header-text">
+          <p class="ws-subtitle">Geschichte · Klasse {{ klasse }} · Recherche-Arbeitsblatt</p>
+          <h1 class="ws-title">Der Erste Weltkrieg (1914–1918)</h1>
+        </div>
+        <img src="{{ url_for('static', filename='img/logo-wk.png') }}" alt="WK" class="logo-wk">
+      </div>
+      <div class="header-bottom">
+        <span class="student-chip">👤 {{ pseudonym }} · Klasse {{ klasse }}</span>
+        <div class="progress-panel" aria-label="Lernfortschritt">
+          <div class="progress-track"><span id="progress-fill"></span></div>
+          <span id="progress-text">0 / {{ aufgaben_gesamt }} Aufgaben</span><span id="progress-pct" class="progress-pct">0 %</span>
+        </div>
+        <form action="{{ url_for('logout') }}" method="post"><button class="btn btn-ghost-light btn-sm" type="submit">Abmelden</button></form>
+      </div>
+    </header>
+
+    <nav class="tab-bar" id="tab-bar" aria-label="Abschnitte des Arbeitsblatts"></nav>
+
+    <main>
+      <section class="tab-panel" id="tab-material" data-panel="material">
+        <article class="card intro-card">
+          <span class="eyebrow">Original-Arbeitsblatt</span>
+          <h2>Der Erste Weltkrieg (1914–1918) – Recherche-Arbeitsblatt</h2>
+          <div class="aufgabe-box">
+            <strong>Aufgabe</strong>
+            <p>Recherchiere die wichtigsten Informationen zum Ersten Weltkrieg. Ergänze die Abschnitte unter den Überschriften stichpunktartig. Achte auf eine sinnvolle zeitliche Ordnung, verwende mindestens zwei verlässliche Quellen und notiere diese am Ende deiner Einträge.</p>
+          </div>
+          <p>Das analoge Arbeitsblatt hat fünf Abschnitte. In dieser digitalen Version bekommt jeder Abschnitt einen eigenen Reiter mit Kompakt-Info, Übungen und einem Feld für deine Recherche-Stichpunkte. Der letzte Reiter bündelt den Zeitstrahl und dein Quellenverzeichnis.</p>
+          <div class="section-map">
+            <a class="section-pill" data-action="tab" data-tab="ursachen" href="#tab-ursachen">🧭 Ursachen</a>
+            <a class="section-pill" data-action="tab" data-tab="ausloeser" href="#tab-ausloeser">🎯 Auslöser</a>
+            <a class="section-pill" data-action="tab" data-tab="verlauf" href="#tab-verlauf">🪖 Verlauf</a>
+            <a class="section-pill" data-action="tab" data-tab="kriegsende" href="#tab-kriegsende">🕊️ Kriegsende</a>
+            <a class="section-pill" data-action="tab" data-tab="folgen" href="#tab-folgen">🧩 Folgen</a>
+            <a class="section-pill" data-action="tab" data-tab="abschluss" href="#tab-abschluss">📚 Zeitstrahl &amp; Quellen</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <span class="eyebrow">So arbeitest du</span>
+          <h3>Niveaus, Rückmeldung und KI</h3>
+          <ul class="howto">
+            <li><strong>Niveau wählen:</strong> Bei jeder Übung kannst du zwischen 🟢 A (Basis), 🟡 B (Standard) und 🔴 C (Experte) wechseln. Fang ruhig mit A an und steigere dich.</li>
+            <li><strong>Sofortige Rückmeldung:</strong> Multiple Choice, Lückentexte, Zuordnungen, Reihenfolgen, Diagramme und Karten werden direkt geprüft.</li>
+            <li><strong>Stichpunkte &amp; Quellen:</strong> In jedem Abschnitt notierst du wie auf dem Papier-AB eigene Stichpunkte mit Quelle. Sie werden automatisch gespeichert.</li>
+            <li><strong>KI-Tutor:</strong> Über den Button unten rechts kannst du Fragen stellen, über „Mit KI prüfen lassen“ Rückmeldung zu Texten bekommen. Beides muss deine Lehrkraft zuerst freigeben – die KI gibt keine Lösungen vor.</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <span class="eyebrow">Originalmaterial</span>
+          <h3>Das Arbeitsblatt als Vorlage</h3>
+          <p class="muted">Die Seitenansicht funktioniert zuverlässig auf dem iPad. Das PDF kannst du zusätzlich separat öffnen.</p>
+          <div class="material-pages">
+            <figure><img src="{{ url_for('static', filename='material/arbeitsblatt_seite1.png') }}" alt="Arbeitsblatt Seite 1: Aufgabe, Ursachen, Auslöser, Verlauf" loading="lazy"><figcaption>Seite 1 · Ursachen, Auslöser, Verlauf</figcaption><button class="btn btn-outline btn-sm" type="button" data-action="reader" data-src="{{ url_for('static', filename='material/arbeitsblatt_seite1.png') }}">🔍 Groß anzeigen</button></figure>
+            <figure><img src="{{ url_for('static', filename='material/arbeitsblatt_seite2.png') }}" alt="Arbeitsblatt Seite 2: Kriegsende, Folgen" loading="lazy"><figcaption>Seite 2 · Kriegsende, Folgen</figcaption><button class="btn btn-outline btn-sm" type="button" data-action="reader" data-src="{{ url_for('static', filename='material/arbeitsblatt_seite2.png') }}">🔍 Groß anzeigen</button></figure>
+          </div>
+          <div class="btn-row">
+            <a class="btn btn-primary" href="{{ url_for('static', filename='material/erster_weltkrieg_arbeitsblatt.pdf') }}" target="_blank" rel="noopener">📄 Original-PDF öffnen</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <span class="eyebrow">Recherche-Tipps</span>
+          <h3>Verlässliche Quellen für dieses Thema</h3>
+          <ul class="howto">
+            <li><strong>Schulbuch:</strong> Kapitel zum Ersten Weltkrieg – Seitenzahlen notieren.</li>
+            <li><strong>bpb.de</strong> – Bundeszentrale für politische Bildung: Dossiers und Zeitleisten.</li>
+            <li><strong>dhm.de/lemo</strong> – Lebendiges Museum Online des Deutschen Historischen Museums.</li>
+            <li><strong>planet-wissen.de</strong> sowie Dokumentationen von ARD/ZDF.</li>
+            <li><strong>Wikipedia:</strong> gut zum Einstieg – wichtige Angaben über die Belege oder eine zweite Quelle prüfen.</li>
+          </ul>
+        </article>
+      </section>
+
+      <div id="panels"></div>
+    </main>
+  </div>
+
+  <!-- Fokus-Reader für die Seitenbilder -->
+  <section id="reader" class="reader" hidden role="dialog" aria-modal="true" aria-label="Arbeitsblatt groß">
+    <header class="reader-header"><strong>Original-Arbeitsblatt</strong><button class="btn btn-accent btn-sm" type="button" data-action="reader-close">Schließen</button></header>
+    <div class="reader-body"><img id="reader-img" src="" alt="Arbeitsblatt-Seite"></div>
+  </section>
+
+  <!-- KI-Tutor -->
+  <button class="tutor-fab" id="tutor-toggle" type="button" data-action="tutor-toggle" aria-expanded="false" aria-controls="tutor-panel">
+    <img src="{{ url_for('static', filename='img/gsm_avatar.png') }}" alt=""><span>KI-Tutor</span>
+  </button>
+  <aside class="tutor-panel" id="tutor-panel" hidden>
+    <header>
+      <img src="{{ url_for('static', filename='img/gsm_avatar.png') }}" alt="GSM-Tutor">
+      <div><strong>GSM-Tutor</strong><small id="tutor-note">KI-Tutor · Freigabe durch Lehrkraft nötig</small></div>
+      <button type="button" data-action="tutor-close" aria-label="Tutor schließen">×</button>
+    </header>
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-message assistant"><strong>GSM-Tutor</strong><p>Hallo! Ich helfe dir beim Ersten Weltkrieg – mit Erklärungen, Rückfragen und Tipps zu verlässlichen Quellen. Lösungen verrate ich nicht. Was möchtest du wissen?</p></div>
+    </div>
+    <div class="chat-input-row">
+      <input id="chat-input" type="text" maxlength="500" placeholder="Deine Frage zum Thema …" autocomplete="off">
+      <button class="btn btn-ai" type="button" data-action="chat-send">Senden</button>
+    </div>
+    <p class="chat-note">🤖 Du sprichst mit einer KI (Google Gemini). Deine Lehrkraft kann den Chat live mitlesen.</p>
+  </aside>
+
+  <!-- Freigabe-Modal -->
+  <div class="ki-overlay" id="ki-overlay" hidden>
+    <div class="ki-modal" role="dialog" aria-modal="true" aria-labelledby="ki-modal-title">
+      <span class="ki-modal-icon" id="ki-modal-icon">🤖</span>
+      <h3 id="ki-modal-title">KI-Funktion freigeben</h3>
+      <p id="ki-modal-text"></p>
+      <div class="waiting-status" id="ki-waiting" hidden><span class="spinner"></span>Warte auf die Lehrkraft …</div>
+      <button class="btn btn-ai btn-wide" type="button" id="ki-request-confirm" data-action="ki-confirm">📤 Freigabe anfragen</button>
+      <button class="btn btn-quiet btn-wide" type="button" data-action="ki-cancel">Abbrechen</button>
+    </div>
+  </div>
+
+  <div class="ki-overlay session-overlay" id="session-overlay" hidden>
+    <div class="ki-modal"><span class="ki-modal-icon">🔒</span><h3>Sitzung beendet</h3><p id="session-overlay-text"></p><a class="btn btn-primary btn-wide" href="{{ url_for('login') }}">Neu anmelden</a></div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

@@ -18,6 +18,12 @@ Interaktives Chemie-Arbeitsblatt für den Klassenunterricht in Jahrgang 7.
 - zusätzliche manuelle Schüler-JSON-Sicherung und temporäre serverseitige Unterrichtssitzungen
 - geprüfte, verschlüsselte Langzeitsicherung auf dem Schul-IServ per WebDAV mit anschließender Datenbereinigung
 
+## Weitere Arbeitsblätter in diesem Repository
+
+- `geschichte-erster-weltkrieg/` – interaktive Vollversion des Recherche-Arbeitsblatts
+  „Der Erste Weltkrieg (1914–1918)“ (Geschichte, Klasse 9) mit eigener Flask-App,
+  Lehrer-Dashboard und KI-Freigabe. Siehe die README im Ordner.
+
 ## Lokal starten
 
 ```powershell

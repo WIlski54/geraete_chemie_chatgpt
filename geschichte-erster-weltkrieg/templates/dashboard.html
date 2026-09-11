@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Erster Weltkrieg · Lehrer-Dashboard</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/logo-gsm.jpg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v=v) }}">
+  <script src="{{ url_for('static', filename='vendor/socket.io-4.7.5.min.js') }}" defer></script>
+  <script>window.DASH = {limit: {{ token_limit }}, aufgabenGesamt: {{ aufgaben_gesamt }}, abschnitte: {{ abschnitte|tojson }}};</script>
+  <script src="{{ url_for('static', filename='js/dashboard.js', v=v) }}" defer></script>
+</head>
+<body class="dashboard-page">
+  <header class="dashboard-header">
+    <div class="dashboard-brand"><img src="{{ url_for('static', filename='img/logo-gsm.jpg') }}" alt="GSM"><div><span class="eyebrow light">Geschichte · Klasse 9</span><h1>Der Erste Weltkrieg · Live-Dashboard</h1></div></div>
+    <div class="dashboard-actions">
+      <span class="pill {{ 'pill-open' if ki_konfiguriert else 'pill-locked' }}">{{ 'KI konfiguriert' if ki_konfiguriert else 'KI ohne Schlüssel' }}</span>
+      <button class="btn btn-ghost-light btn-sm" id="refresh-dashboard" type="button">Aktualisieren</button>
+      <form action="{{ url_for('lehrer_logout') }}" method="post"><button class="btn btn-accent btn-sm" type="submit">Abmelden</button></form>
+    </div>
+  </header>
+
+  <main class="dashboard-main">
+    <section class="kpi-grid" aria-label="Kennzahlen">
+      <article><span>Angemeldet</span><strong id="kpi-students">{{ schueler_infos|length }}</strong></article>
+      <article><span>Online</span><strong id="kpi-online">{{ schueler_infos|selectattr('online')|list|length }}</strong></article>
+      <article><span>Offene KI-Anfragen</span><strong id="kpi-requests">{{ offene|length }}</strong></article>
+      <article><span>Antwortversuche</span><strong id="kpi-answers">{{ schueler_infos|sum(attribute='antworten') }}</strong></article>
+      <article><span>KI-Tokens heute</span><strong id="kpi-tokens">{{ today_tokens }}</strong></article>
+    </section>
+
+    <section class="dashboard-card budget-card">
+      <div class="card-title"><div><span class="eyebrow">Tagesbudget KI</span><h2 id="budget-label">{{ today_tokens }} / {{ token_limit }} Tokens</h2></div></div>
+      <div class="progress-track"><span id="budget-fill"></span></div>
+    </section>
+
+    <div class="dashboard-columns">
+      <section class="dashboard-card">
+        <header class="card-title"><div><span class="eyebrow">Jetzt entscheiden</span><h2>KI-Freigaben</h2></div><span class="count-badge" id="request-count">{{ offene|length }}</span></header>
+        <p class="help-text">Schüler:innen fragen KI-Tutor oder KI-Feedback an. Eine Freigabe gilt für den jeweiligen Typ bis zum Ende der Sitzung; „KI sperren“ in der Tabelle beendet alles sofort.</p>
+        <div id="request-list" class="request-list">
+          {% for a in offene %}
+          <div class="request-item" data-id="{{ a.id }}">
+            <span class="request-typ">{{ 'Tutor' if a.typ == 'chat' else 'Feedback' }}</span>
+            <div class="who"><strong>{{ a.pseudonym }}</strong><small>Klasse {{ a.klasse }} · {{ a.kontext }} · {{ a.erstellt_at[11:16] }}</small></div>
+            <button class="btn btn-primary btn-sm" data-decide="freigegeben" data-id="{{ a.id }}" type="button">✅ Freigeben</button>
+            <button class="btn btn-danger-outline btn-sm" data-decide="abgelehnt" data-id="{{ a.id }}" type="button">✕</button>
+          </div>
+          {% else %}<p class="empty-state" id="no-requests">Keine offenen Anfragen.</p>{% endfor %}
+        </div>
+      </section>
+
+      <section class="dashboard-card">
+        <header class="card-title"><div><span class="eyebrow">Abschnitte</span><h2>Aufbau des Arbeitsblatts</h2></div></header>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Kürzel</th><th>Abschnitt</th><th>Aufgaben</th></tr></thead>
+          <tbody>{% for a in abschnitte %}<tr><td><span class="abschnitt-chip">{{ a.kurz }}</span></td><td>{{ a.titel }}</td><td>{{ a.aufgaben|join(', ') }}</td></tr>{% endfor %}</tbody>
+        </table></div>
+        <p class="help-text">Jeder Abschnitt enthält Multiple Choice, Lückentext, Zuordnung, Sortierung, Diagramm bzw. Karte, einen KI-Freitext und die Recherche-Stichpunkte. Aufgabe T ist die Transferaufgabe.</p>
+      </section>
+    </div>
+
+    <section class="dashboard-card">
+      <header class="card-title"><div><span class="eyebrow">Klassenübersicht</span><h2>Lernende</h2></div><button class="btn btn-danger-outline btn-sm" id="reset-session" type="button">Alle Sitzungsdaten löschen</button></header>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Status</th><th>Pseudonym</th><th>Klasse</th><th>Fortschritt</th><th>Abschnitte</th><th>Antworten</th><th>Notizen</th><th>KI</th><th>Letzte Aktivität</th><th>Aktionen</th></tr></thead>
+        <tbody id="student-table"><tr id="no-students"><td colspan="10" class="empty-state">Noch niemand angemeldet.</td></tr></tbody>
+      </table></div>
+    </section>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

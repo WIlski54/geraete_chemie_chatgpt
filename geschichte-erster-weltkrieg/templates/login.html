@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Erster Weltkrieg · Anmeldung</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/logo-gsm.jpg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v=v) }}">
+</head>
+<body class="login-page">
+  <main class="login-shell">
+    <section class="login-brand" aria-label="Thema">
+      <div class="login-logos">
+        <img src="{{ url_for('static', filename='img/logo-gsm.jpg') }}" alt="Gesamtschule Meiderich" class="login-logo">
+        <img src="{{ url_for('static', filename='img/logo-wk.png') }}" alt="WK" class="login-logo login-logo-wk">
+      </div>
+      <span class="eyebrow light">Geschichte · Klasse 9</span>
+      <h1>Der Erste Weltkrieg<br>1914–1918</h1>
+      <p>Ursachen, Auslöser, Verlauf, Kriegsende und Folgen – recherchieren, ordnen, erklären.</p>
+      <div class="login-timeline" aria-hidden="true">
+        <span>1914</span><i></i><span>1916</span><i></i><span>1918</span><i></i><span>1919</span>
+      </div>
+    </section>
+
+    <section class="login-card">
+      <span class="eyebrow">Dein Lernplatz</span>
+      <h2>Starte mit einem Pseudonym</h2>
+      <p class="muted">Nutze keinen echten Namen. Ein Fantasiename reicht.</p>
+      {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
+      <form method="post" class="stack-lg">
+        <label class="field-label" for="pseudonym">Pseudonym</label>
+        <input id="pseudonym" name="pseudonym" minlength="2" maxlength="30" autocomplete="off" required placeholder="z. B. Silberfuchs">
+
+        <label class="field-label" for="klasse">Klasse</label>
+        <input id="klasse" name="klasse" maxlength="20" value="9" required>
+
+        <div class="privacy-box">
+          <strong>Datenschutz- und KI-Hinweis</strong>
+          <p>Gespeichert werden dein Pseudonym, deine Klasse, deine Antworten, Recherche-Stichpunkte, Quellen, dein Lernfortschritt und die Zeitpunkte deiner KI-Freigaben. Deine Lehrkraft kann diese Unterrichtsdaten sehen.</p>
+          <details>
+            <summary>Langfassung anzeigen</summary>
+            <div class="privacy-long">
+              <p>Verwende keine Klarnamen, Kontaktdaten oder andere sensible Angaben. Die Daten liegen nur in der Datenbank dieser Lernapp und werden beim nächsten Start der Anwendung oder auf Wunsch deiner Lehrkraft gelöscht.</p>
+              <p>Der KI-Tutor und das KI-Feedback verwenden generative KI (Google Gemini) – erst nachdem deine Lehrkraft die Nutzung freigegeben hat. Chat-Inhalte werden nicht dauerhaft gespeichert, die Lehrkraft kann sie während der Stunde live mitlesen. KI kann Fehler machen und ersetzt keine Bewertung durch die Lehrkraft.</p>
+              <p>Für Auskunft, Berichtigung oder Löschung wende dich an deine Lehrkraft oder an die schulische Datenschutzbeauftragte bzw. den schulischen Datenschutzbeauftragten. Dieser Text ist eine schulische Transparenzvorlage und keine Rechtsberatung.</p>
+            </div>
+          </details>
+        </div>
+
+        <label class="check-row">
+          <input type="checkbox" name="privacy_ok" required>
+          <span>Ich habe den Datenschutz- und KI-Hinweis gelesen.</span>
+        </label>
+        <button class="btn btn-primary btn-wide" type="submit">Arbeitsblatt öffnen <span aria-hidden="true">→</span></button>
+      </form>
+      <p class="ki-badge">🤖 Dieses Tool nutzt generative KI (Google Gemini) – nur nach Freigabe durch die Lehrkraft.</p>
+      <a class="teacher-link" href="{{ url_for('lehrer_login') }}">🏫 Lehrerbereich</a>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Erster Weltkrieg · Lehrerbereich</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/logo-gsm.jpg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v=v) }}">
+</head>
+<body class="login-page teacher-login-page">
+  <main class="compact-login-card">
+    <img src="{{ url_for('static', filename='img/logo-gsm.jpg') }}" alt="Gesamtschule Meiderich" class="compact-logo">
+    <span class="eyebrow">Lehrerbereich</span>
+    <h1>Erster Weltkrieg · Live-Dashboard</h1>
+    <p class="muted">KI-Freigaben, Lernfortschritt, Stichpunkte und Antwortprotokolle.</p>
+    {% if error %}<div class="alert alert-error" role="alert">{{ error }}</div>{% endif %}
+    <form method="post" class="stack-lg">
+      <label class="field-label" for="passwort">Passwort</label>
+      <input id="passwort" type="password" name="passwort" required autofocus autocomplete="current-password">
+      <button class="btn btn-primary btn-wide" type="submit">Dashboard öffnen</button>
+    </form>
+    <a class="back-link" href="{{ url_for('login') }}">← Zur Schüleranmeldung</a>
+  </main>
+</body>
+</html>
