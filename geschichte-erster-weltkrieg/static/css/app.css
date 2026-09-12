@@ -287,7 +287,7 @@ body.ki-locked .tutor-fab { background: #6b7280; box-shadow: none; }
 .ki-badge { font-size: .8rem; color: var(--text-muted); margin: 14px 0 4px; }
 .teacher-link { display: inline-block; margin-top: 8px; font-weight: 700; }
 .compact-login-card { width: min(440px, 100%); background: #fff; border-radius: 22px; padding: 32px; box-shadow: 0 24px 60px rgba(13, 27, 42, .2); }
-.compact-logo { height: 60px; width: auto; margin-bottom: 12px; }
+.compact-logo { display: block; height: 60px; width: auto; margin-bottom: 14px; }
 .back-link { display: inline-block; margin-top: 14px; }
 
 /* Dashboard */
