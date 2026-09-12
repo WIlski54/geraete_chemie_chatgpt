@@ -72,6 +72,10 @@ Nummern sind fortlaufend 1–43 plus `"T"`.
 
 ## Konventionen aus dem Skill
 
+- GSM-Logo (`static/img/logo-gsm.png`) ist freigestellt (PNG mit Alphakanal) und wird auf allen Seiten
+  ohne weißen Kasten, Padding oder Hintergrund eingesetzt. Kein JPEG mit schwarzem Grund verwenden.
+  Das WK-Logo hat einen schwarzen Grund und bekommt deshalb `mix-blend-mode: lighten` auf dunklen Headern.
+
 - Jede differenzierte Aufgabe hat alle drei Niveaus; Niveauwechsel rendert nur die eigene Card neu.
 - Keine doppelten `id`-Werte; Buttons `btn-tab-*`, Panels `tab-*`, Cards `card-<nr>`, Feedback `fb-<nr>`.
 - Jede Antwort geht über `sendAntwort(nr, typ, text, korrekt)` an `/api/antwort`; bei geblockter KI

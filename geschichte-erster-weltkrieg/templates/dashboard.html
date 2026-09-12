@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Erster Weltkrieg · Lehrer-Dashboard</title>
-  <link rel="icon" href="{{ url_for('static', filename='img/logo-gsm.jpg') }}">
+  <link rel="icon" href="{{ url_for('static', filename='img/logo-gsm.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v=v) }}">
   <script src="{{ url_for('static', filename='vendor/socket.io-4.7.5.min.js') }}" defer></script>
   <script>window.DASH = {limit: {{ token_limit }}, aufgabenGesamt: {{ aufgaben_gesamt }}, abschnitte: {{ abschnitte|tojson }}};</script>
@@ -12,7 +12,7 @@
 </head>
 <body class="dashboard-page">
   <header class="dashboard-header">
-    <div class="dashboard-brand"><img src="{{ url_for('static', filename='img/logo-gsm.jpg') }}" alt="GSM"><div><span class="eyebrow light">Geschichte · Klasse 9</span><h1>Der Erste Weltkrieg · Live-Dashboard</h1></div></div>
+    <div class="dashboard-brand"><img src="{{ url_for('static', filename='img/logo-gsm.png') }}" alt="GSM"><div><span class="eyebrow light">Geschichte · Klasse 9</span><h1>Der Erste Weltkrieg · Live-Dashboard</h1></div></div>
     <div class="dashboard-actions">
       <span class="pill {{ 'pill-open' if ki_konfiguriert else 'pill-locked' }}">{{ 'KI konfiguriert' if ki_konfiguriert else 'KI ohne Schlüssel' }}</span>
       <button class="btn btn-ghost-light btn-sm" id="refresh-dashboard" type="button">Aktualisieren</button>
