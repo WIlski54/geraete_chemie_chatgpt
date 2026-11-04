@@ -179,6 +179,21 @@ class LaborgeraeteAppTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["app_id"], core.APP_ID)
 
+    def test_amiga_emulator_is_served(self):
+        response = self.student.get("/amiga")
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.headers["Location"].endswith("/static/amiga/index.html"))
+        page = self.student.get("/static/amiga/index.html")
+        self.assertEqual(page.status_code, 200)
+        html = page.get_data(as_text=True)
+        page.close()
+        self.assertIn("AmigaWerk", html)
+        for asset in ("sae/amiga.js", "roms/aros.js", "js/app.js", "js/demodisk.js", "css/app.css"):
+            self.assertIn(asset, html)
+            res = self.student.get("/static/amiga/" + asset)
+            self.assertEqual(res.status_code, 200, asset)
+            res.close()
+
     def test_workspace_autosave_and_resume_token_restore_the_same_student(self):
         self.login_student(self.student)
         with self.student.session_transaction() as student_session:

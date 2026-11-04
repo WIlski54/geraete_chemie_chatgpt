@@ -32,6 +32,13 @@ Dann `http://127.0.0.1:5000` öffnen. Das Beispielpasswort für den Lehrerbereic
 
 Für KI-Tutor, Handschrifterkennung und Zeichenfeedback wird `GEMINI_API_KEY` benötigt. Ohne Schlüssel bleiben alle übrigen Bereiche nutzbar und die KI-Flächen zeigen einen klaren Konfigurationshinweis.
 
+## Bonus: Amiga-Emulator „AmigaWerk“
+
+Unter `/amiga` (bzw. `static/amiga/index.html`, auch per Doppelklick ohne Server)
+liegt ein vollständiger Amiga-Emulator im Browser mit Einstellungsdialog im Stil
+klassischer Desktop-Emulatoren, freiem AROS-Kickstart und einer eingebauten
+Demo-Diskette. Details und Lizenzen: [`static/amiga/README.md`](static/amiga/README.md).
+
 ## Verschlüsselte IServ-Sicherung
 
 Der IServ-Prototyp ist standardmäßig deaktiviert. Erst wenn alle fünf benötigten

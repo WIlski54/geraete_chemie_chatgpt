@@ -983,6 +983,12 @@ def root():
     return redirect(url_for("schueler") if session.get("schueler_id") else url_for("login"))
 
 
+@app.get("/amiga")
+def amiga():
+    """Amiga-Emulator AmigaWerk (rein statisch unter static/amiga/)."""
+    return redirect(url_for("static", filename="amiga/index.html"))
+
+
 @app.get("/health")
 def health():
     try:
