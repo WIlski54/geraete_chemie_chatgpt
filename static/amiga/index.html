@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AmigaWerk</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<!-- ======================================================================
+     AmigaWerk – Amiga-Emulator im Browser
+     Oberfläche: eigenständig (dieses Projekt)
+     Emulationskern: SAE – Scripted Amiga Emulator (GPL-2.0, sae/)
+     Kickstart-Ersatz: AROS (AROS Public License, roms/aros.js)
+     ====================================================================== -->
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gChip" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5d6b78"/><stop offset="1" stop-color="#262e36"/></linearGradient>
+    <linearGradient id="gBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fb6ec"/><stop offset="1" stop-color="#2a6cb5"/></linearGradient>
+    <linearGradient id="gGreen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8be07a"/><stop offset="1" stop-color="#2f9a2a"/></linearGradient>
+    <linearGradient id="gGray" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f4f4"/><stop offset="1" stop-color="#b9bec4"/></linearGradient>
+  </defs>
+  <symbol id="i-root" viewBox="0 0 16 16"><ellipse cx="8" cy="4" rx="6" ry="2.4" fill="url(#gChip)"/><path d="M2 4v8c0 1.3 2.7 2.4 6 2.4s6-1.1 6-2.4V4c0 1.3-2.7 2.4-6 2.4S2 5.3 2 4z" fill="url(#gChip)"/><ellipse cx="8" cy="4" rx="4.4" ry="1.4" fill="#9aa7b3"/></symbol>
+  <symbol id="i-about" viewBox="0 0 16 16"><path d="M2 9l4 4 8-11" fill="none" stroke="#2f9a2a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M11 2l3 0-1 3" fill="none" stroke="#c9861a" stroke-width="1.4"/></symbol>
+  <symbol id="i-play" viewBox="0 0 16 16"><path d="M3 2l11 6-11 6z" fill="url(#gGreen)" stroke="#1f6e1b" stroke-width=".8"/></symbol>
+  <symbol id="i-cfg" viewBox="0 0 16 16"><rect x="2.5" y="1.5" width="11" height="13" rx="1" fill="url(#gGray)" stroke="#6b7480"/><path d="M5 5h6M5 8h6M5 11h4" stroke="#2a6cb5" stroke-width="1.2"/></symbol>
+  <symbol id="i-chip" viewBox="0 0 16 16"><rect x="4" y="4" width="8" height="8" fill="url(#gChip)"/><path d="M6 2v2M8 2v2M10 2v2M6 12v2M8 12v2M10 12v2M2 6h2M2 8h2M2 10h2M12 6h2M12 8h2M12 10h2" stroke="#4a5560" stroke-width="1"/><rect x="6" y="6" width="4" height="4" fill="#7fb026"/></symbol>
+  <symbol id="i-rom" viewBox="0 0 16 16"><rect x="5" y="1.5" width="6" height="13" fill="url(#gChip)"/><path d="M3 3.5h2M3 6h2M3 8.5h2M3 11h2M11 3.5h2M11 6h2M11 8.5h2M11 11h2" stroke="#4a5560"/><circle cx="8" cy="3.4" r=".9" fill="#c9cdd2"/></symbol>
+  <symbol id="i-ram" viewBox="0 0 16 16"><rect x="1" y="5" width="14" height="6" fill="#2c7a3b" stroke="#1d5228" stroke-width=".6"/><rect x="2.5" y="6.3" width="2.4" height="3" fill="#20262c"/><rect x="5.6" y="6.3" width="2.4" height="3" fill="#20262c"/><rect x="8.7" y="6.3" width="2.4" height="3" fill="#20262c"/><rect x="11.8" y="6.3" width="2" height="3" fill="#20262c"/><path d="M2 11v1.5M4 11v1.5M6 11v1.5M8 11v1.5M10 11v1.5M12 11v1.5M14 11v1.5" stroke="#d6a93a"/></symbol>
+  <symbol id="i-floppy" viewBox="0 0 16 16"><path d="M2 2h10l2 2v10H2z" fill="#3b4a5a"/><rect x="4.5" y="2" width="6" height="4" fill="#c9cdd2"/><rect x="8.5" y="2.7" width="1.3" height="2.6" fill="#3b4a5a"/><rect x="4" y="9" width="8" height="5" fill="#f2f2f2"/></symbol>
+  <symbol id="i-hdd" viewBox="0 0 16 16"><rect x="1.5" y="4" width="13" height="8" rx="1" fill="url(#gGray)" stroke="#6b7480"/><circle cx="5" cy="8" r="2.2" fill="#d0d4d9" stroke="#7d8690" stroke-width=".7"/><rect x="9" y="9.5" width="4" height="1" fill="#6b7480"/><circle cx="12.4" cy="6" r=".8" fill="#2f9a2a"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 16 16"><rect x="1.5" y="2" width="13" height="9" rx="1" fill="#3b4a5a"/><rect x="2.7" y="3.2" width="10.6" height="6.6" fill="url(#gBlue)"/><path d="M6 11h4v2H6z M4 13.5h8" stroke="#3b4a5a" fill="#6b7480"/></symbol>
+  <symbol id="i-sound" viewBox="0 0 16 16"><path d="M2 6h3l4-3v10l-4-3H2z" fill="url(#gChip)"/><path d="M11 5.5c1 1.4 1 3.6 0 5M12.8 3.8c1.9 2.4 1.9 6 0 8.4" fill="none" stroke="#2a6cb5" stroke-width="1.3" stroke-linecap="round"/></symbol>
+  <symbol id="i-joy" viewBox="0 0 16 16"><rect x="2" y="10" width="12" height="4" rx="1" fill="#20262c"/><path d="M7.3 10V5h1.4v5z" fill="#5d6b78"/><circle cx="8" cy="4" r="2.6" fill="#c8302c"/><circle cx="12" cy="10" r="1.1" fill="#c8302c"/></symbol>
+  <symbol id="i-key" viewBox="0 0 16 16"><rect x="1" y="4.5" width="14" height="7" rx="1" fill="url(#gGray)" stroke="#6b7480"/><path d="M3 6.5h1M5 6.5h1M7 6.5h1M9 6.5h1M11 6.5h1M13 6.5h0.5M3.5 8.3h1M5.5 8.3h1M7.5 8.3h1M9.5 8.3h1M11.5 8.3h1M5 10h6" stroke="#3b4a5a"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 16 16"><rect x="1.5" y="2" width="13" height="9" rx="1" fill="#3b4a5a"/><rect x="2.7" y="3.2" width="10.6" height="6.6" fill="#122"/><path d="M2.7 4.2h10.6M2.7 5.8h10.6M2.7 7.4h10.6M2.7 9h10.6" stroke="#3fd07a" stroke-width=".7"/><path d="M6 11h4v2H6z M4 13.5h8" stroke="#3b4a5a" fill="#6b7480"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 16 16"><path d="M5 1h8l2 2v8H5z" fill="#6b7480"/><path d="M1 5h8l2 2v8H1z" fill="#3b4a5a"/><rect x="3" y="5" width="5" height="3" fill="#c9cdd2"/><rect x="3" y="11" width="6" height="4" fill="#f2f2f2"/></symbol>
+  <symbol id="i-misc" viewBox="0 0 16 16"><circle cx="5.5" cy="6" r="3.6" fill="#2f9a2a"/><circle cx="11" cy="10.5" r="3.6" fill="#2a6cb5"/><circle cx="5.5" cy="6" r="1.3" fill="#e8f5e5"/><circle cx="11" cy="10.5" r="1.3" fill="#e5eef8"/><circle cx="12" cy="4" r="2.2" fill="#c8302c"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 16 16"><path d="M8 1.5l1.2 1.8 2.1-.6.4 2.1 2.1.4-.6 2.1 1.8 1.2-1.8 1.2.6 2.1-2.1.4-.4 2.1-2.1-.6L8 14.5l-1.2-1.8-2.1.6-.4-2.1-2.1-.4.6-2.1L1 8l1.8-1.2-.6-2.1 2.1-.4.4-2.1 2.1.6z" fill="currentColor"/><circle cx="8" cy="8" r="2.4" fill="var(--tb-bg, #fff)"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 16 16"><rect x="3.5" y="2.5" width="3" height="11" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" fill="currentColor"/></symbol>
+  <symbol id="i-resume" viewBox="0 0 16 16"><path d="M4 2.5l9 5.5-9 5.5z" fill="currentColor"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.6-3.7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M13.6 1.5v4.3H9.3z" fill="currentColor"/></symbol>
+  <symbol id="i-vol" viewBox="0 0 16 16"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/><path d="M11 5.5c1 1.4 1 3.6 0 5M12.8 3.8c1.9 2.4 1.9 6 0 8.4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 16 16"><path d="M2 6h3l4-3v10l-4-3H2z" fill="currentColor"/><path d="M11 5.5l4 5M15 5.5l-4 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-full" viewBox="0 0 16 16"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-cam" viewBox="0 0 16 16"><path d="M1.5 5h3l1.5-2h4l1.5 2h3v8h-13z" fill="currentColor"/><circle cx="8" cy="8.8" r="2.6" fill="var(--tb-bg, #fff)"/><circle cx="8" cy="8.8" r="1.4" fill="currentColor"/></symbol>
+  <symbol id="i-save" viewBox="0 0 16 16"><path d="M2 2h10l2 2v10H2z" fill="currentColor"/><rect x="4.5" y="2" width="6" height="4" fill="var(--tb-bg, #fff)"/><rect x="4" y="9" width="8" height="5" fill="var(--tb-bg, #fff)"/></symbol>
+  <symbol id="i-eject" viewBox="0 0 16 16"><path d="M8 2.5l6 6.5H2z M2 11h12v2.5H2z" fill="currentColor"/></symbol>
+  <symbol id="i-power" viewBox="0 0 16 16"><path d="M8 1.5v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4.4 4a5.4 5.4 0 1 0 7.2 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+</defs>
+</svg>
+
+<div id="desktop">
+
+  <!-- ================= Emulator-Fenster ================= -->
+  <section id="emuWin" class="win" hidden aria-label="Amiga-Bildschirm">
+    <header class="win-title">
+      <span class="win-icon"><svg><use href="#i-root"/></svg></span>
+      <span id="emuTitle" class="win-caption">AmigaWerk</span>
+      <span class="win-btns" aria-hidden="true"><i></i><i></i><i class="x"></i></span>
+    </header>
+    <div class="toolbar" role="toolbar" aria-label="Emulator-Steuerung">
+      <button id="tbSettings" class="tb" title="Einstellungen (F12)"><svg><use href="#i-gear"/></svg><span>Einstellungen</span></button>
+      <button id="tbPause" class="tb" title="Pause / Fortsetzen (Pause-Taste)"><svg><use href="#i-pause"/></svg><span>Pause</span></button>
+      <button id="tbReset" class="tb" title="Amiga zurücksetzen (Strg+Amiga+Amiga)"><svg><use href="#i-reset"/></svg><span>Reset</span></button>
+      <span class="tb-sep"></span>
+      <button id="tbDf0" class="tb" title="Diskette in DF0: einlegen"><svg><use href="#i-floppy"/></svg><span>DF0:</span></button>
+      <button id="tbDf1" class="tb" title="Diskette in DF1: einlegen"><svg><use href="#i-floppy"/></svg><span>DF1:</span></button>
+      <button id="tbSave" class="tb" title="Veränderte Disketten als ADF speichern" disabled><svg><use href="#i-save"/></svg><span>Speichern</span></button>
+      <span class="tb-sep"></span>
+      <button id="tbMute" class="tb" title="Ton an/aus"><svg><use href="#i-vol"/></svg><span>Ton</span></button>
+      <button id="tbShot" class="tb" title="Bildschirmfoto als PNG"><svg><use href="#i-cam"/></svg><span>Foto</span></button>
+      <button id="tbFull" class="tb" title="Vollbild (Alt+Enter)"><svg><use href="#i-full"/></svg><span>Vollbild</span></button>
+      <span class="tb-fill"></span>
+      <button id="tbQuit" class="tb tb-quit" title="Emulation beenden"><svg><use href="#i-power"/></svg><span>Aus</span></button>
+    </div>
+    <div id="screenWrap">
+      <div id="screenBox">
+        <div id="amigaVideo"></div>
+        <div id="crt" aria-hidden="true"></div>
+        <div id="pausedBadge" hidden>PAUSE</div>
+        <div id="dropHint" hidden>Diskette loslassen → DF0: <small>(mit Umschalt → DF1:)</small></div>
+      </div>
+      <p id="focusHint" class="focus-hint" hidden>Ins Bild klicken, damit Tastatur und Maus beim Amiga ankommen. Esc gibt die Maus wieder frei.</p>
+    </div>
+    <footer class="statusbar" aria-live="off">
+      <span id="sbMsg" class="sb-msg">Bereit</span>
+      <span class="sb-leds">
+        <span class="led-cell" title="Betriebsanzeige"><i id="ledPower" class="led"></i>Power</span>
+        <span class="led-cell" title="Festplatte"><i id="ledHd" class="led"></i>HD</span>
+        <span class="led-cell df" title="DF0: Spur"><i id="ledDf0" class="led"></i><b id="trkDf0">--</b></span>
+        <span class="led-cell df" title="DF1: Spur"><i id="ledDf1" class="led"></i><b id="trkDf1">--</b></span>
+        <span class="led-cell df" title="DF2: Spur"><i id="ledDf2" class="led"></i><b id="trkDf2">--</b></span>
+        <span class="led-cell df" title="DF3: Spur"><i id="ledDf3" class="led"></i><b id="trkDf3">--</b></span>
+        <span class="led-cell num" title="Bilder pro Sekunde"><b id="sbFps">0.0</b> FPS</span>
+        <span class="led-cell num" title="CPU-Last des Emulators"><b id="sbCpu">0</b>%</span>
+      </span>
+    </footer>
+  </section>
+
+  <!-- ================= Eigenschaften-Dialog ================= -->
+  <div id="propLayer">
+  <section id="propWin" class="win dialog" role="dialog" aria-labelledby="propCaption">
+    <header class="win-title">
+      <span class="win-icon"><svg><use href="#i-root"/></svg></span>
+      <span id="propCaption" class="win-caption">AmigaWerk – Eigenschaften</span>
+      <span class="win-btns" aria-hidden="true"><i></i><i></i><i class="x" id="propX" title="Schließen"></i></span>
+    </header>
+
+    <div class="prop-body">
+      <!-- Baumansicht -->
+      <nav class="tree" aria-label="Einstellungsseiten">
+        <select id="treeSelect" class="tree-select" aria-label="Seite wählen"></select>
+        <ul id="tree" role="tree">
+          <li role="treeitem" aria-expanded="true"><span class="node root"><svg><use href="#i-root"/></svg>Einstellungen</span>
+            <ul role="group">
+              <li><a href="#" data-page="about"><svg><use href="#i-about"/></svg>Über</a></li>
+              <li><a href="#" data-page="quickstart"><svg><use href="#i-play"/></svg>Schnellstart</a></li>
+              <li><a href="#" data-page="configs"><svg><use href="#i-cfg"/></svg>Konfigurationen</a></li>
+              <li role="treeitem" aria-expanded="true"><span class="node"><svg><use href="#i-root"/></svg>Hardware</span>
+                <ul role="group">
+                  <li><a href="#" data-page="cpu"><svg><use href="#i-chip"/></svg>CPU und FPU</a></li>
+                  <li><a href="#" data-page="chipset"><svg><use href="#i-chip"/></svg>Chipsatz</a></li>
+                  <li><a href="#" data-page="rom"><svg><use href="#i-rom"/></svg>ROM</a></li>
+                  <li><a href="#" data-page="ram"><svg><use href="#i-ram"/></svg>RAM</a></li>
+                  <li><a href="#" data-page="floppy"><svg><use href="#i-floppy"/></svg>Diskettenlaufwerke</a></li>
+                  <li><a href="#" data-page="hd"><svg><use href="#i-hdd"/></svg>Festplatten</a></li>
+                </ul>
+              </li>
+              <li role="treeitem" aria-expanded="true"><span class="node"><svg><use href="#i-root"/></svg>Host</span>
+                <ul role="group">
+                  <li><a href="#" data-page="display"><svg><use href="#i-monitor"/></svg>Anzeige</a></li>
+                  <li><a href="#" data-page="sound"><svg><use href="#i-sound"/></svg>Sound</a></li>
+                  <li><a href="#" data-page="ports"><svg><use href="#i-joy"/></svg>Gameports</a></li>
+                  <li><a href="#" data-page="input"><svg><use href="#i-key"/></svg>Eingabe</a></li>
+                  <li><a href="#" data-page="filter"><svg><use href="#i-filter"/></svg>Filter</a></li>
+                  <li><a href="#" data-page="swapper"><svg><use href="#i-swap"/></svg>Diskettenwechsler</a></li>
+                  <li><a href="#" data-page="misc"><svg><use href="#i-misc"/></svg>Verschiedenes</a></li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Seiten -->
+      <div class="pages">
+
+        <!-- ---------- Über ---------- -->
+        <div class="page" data-page="about">
+          <div class="about-hero">
+            <div class="boing" aria-hidden="true"></div>
+            <div>
+              <h1>AmigaWerk</h1>
+              <p class="sub">Amiga-Emulator für den Browser</p>
+              <p id="aboutVersion" class="mono"></p>
+            </div>
+          </div>
+          <fieldset><legend>Was steckt drin?</legend>
+            <ul class="facts">
+              <li><b>Emulationskern:</b> SAE – Scripted Amiga Emulator von Rupert Hausberger, ein JavaScript-Port von UAE/WinUAE. Lizenz: GNU GPL 2.0 (<a href="sae/LICENSE-GPL-2.0.html" target="_blank" rel="noopener">Lizenztext</a>, <a href="https://github.com/naTmeg/ScriptedAmigaEmulator" target="_blank" rel="noopener">Quellcode</a>).</li>
+              <li><b>Kickstart:</b> eingebaut ist der freie Kickstart-Ersatz AROS (AROS Public License). Original-Kickstarts von Commodore sind urheberrechtlich geschützt; legal gibt es sie z. B. mit „Amiga Forever“ von Cloanto. Eigene ROM-Dateien lädst du unter <a href="#" data-goto="rom">ROM</a>.</li>
+              <li><b>Emuliert:</b> 68000 bis 68030, OCS/ECS/AGA, Chip-/Slow-/Fast-/Zorro-III-RAM, vier Diskettenlaufwerke (ADF, DMS, ADZ, ZIP), IDE-Festplatten (HDF), Paula-Sound, Maus und Joystick.</li>
+              <li><b>Alles bleibt lokal:</b> Disketten und ROMs werden nur in diesem Browser verarbeitet und gespeichert, nichts wird hochgeladen.</li>
+            </ul>
+          </fieldset>
+          <fieldset><legend>Tastenkürzel</legend>
+            <table class="keys">
+              <tr><td><kbd>F12</kbd></td><td>Einstellungen öffnen/schließen (Emulation pausiert solange)</td></tr>
+              <tr><td><kbd>Pause</kbd></td><td>Emulation anhalten/fortsetzen</td></tr>
+              <tr><td><kbd>Alt</kbd>+<kbd>Enter</kbd></td><td>Vollbild an/aus</td></tr>
+              <tr><td><kbd>Esc</kbd></td><td>Maus aus dem Amiga-Fenster freigeben</td></tr>
+              <tr><td>Datei aufs Bild ziehen</td><td>Diskette in DF0: einlegen (mit <kbd>Umschalt</kbd> in DF1:)</td></tr>
+            </table>
+          </fieldset>
+        </div>
+
+        <!-- ---------- Schnellstart ---------- -->
+        <div class="page" data-page="quickstart">
+          <fieldset><legend>Emulierte Hardware</legend>
+            <div class="row"><label for="qsModel" class="lbl">Modell:</label>
+              <select id="qsModel" class="grow"></select>
+              <label class="chk"><input type="checkbox" id="qsNtsc"> NTSC</label></div>
+            <div class="row"><label for="qsConfig" class="lbl">Konfiguration:</label>
+              <select id="qsConfig" class="grow"></select></div>
+          </fieldset>
+          <fieldset><legend>Kompatibilität gegen benötigte CPU-Leistung</legend>
+            <div class="row slider-row">
+              <span class="slider-end">Beste Kompatibilität</span>
+              <input type="range" id="qsCompat" min="0" max="3" step="1" list="qsCompatTicks" aria-label="Kompatibilität">
+              <datalist id="qsCompatTicks"><option value="0"></option><option value="1"></option><option value="2"></option><option value="3"></option></datalist>
+              <span class="slider-end">Geringe Kompatibilität</span>
+            </div>
+            <p id="qsCompatText" class="hint"></p>
+          </fieldset>
+          <fieldset><legend>Kickstart</legend>
+            <div class="row"><label for="qsRom" class="lbl">ROM:</label>
+              <select id="qsRom" class="grow">
+                <option value="aros">AROS – freier Kickstart-Ersatz (eingebaut)</option>
+                <option value="file">Eigene Kickstart-ROM-Datei</option>
+              </select>
+              <button class="btn" id="qsRomPick">Auswählen…</button></div>
+            <p id="qsRomInfo" class="hint"></p>
+          </fieldset>
+          <fieldset><legend>Emulierte Laufwerke</legend>
+            <div class="drive" data-unit="0">
+              <div class="row">
+                <label class="chk drv-lbl"><input type="checkbox" checked disabled> Diskettenlaufwerk DF0:</label>
+                <button class="btn pick" data-unit="0">Image-Datei wählen</button>
+                <label class="chk dim"><input type="checkbox" class="wp" data-unit="0"> Schreibgeschützt</label>
+                <span class="row-fill"></span>
+                <button class="btn sq info" data-unit="0" title="Informationen zur Diskette">?</button>
+                <button class="btn eject" data-unit="0">Auswerfen</button>
+              </div>
+              <select class="hist grow" data-unit="0" aria-label="Zuletzt benutzte Disketten DF0"></select>
+            </div>
+            <div class="drive" data-unit="1">
+              <div class="row">
+                <label class="chk drv-lbl"><input type="checkbox" class="den" data-unit="1"> Diskettenlaufwerk DF1:</label>
+                <button class="btn pick" data-unit="1">Image-Datei wählen</button>
+                <label class="chk dim"><input type="checkbox" class="wp" data-unit="1"> Schreibgeschützt</label>
+                <span class="row-fill"></span>
+                <button class="btn sq info" data-unit="1" title="Informationen zur Diskette">?</button>
+                <button class="btn eject" data-unit="1">Auswerfen</button>
+              </div>
+              <select class="hist grow" data-unit="1" aria-label="Zuletzt benutzte Disketten DF1"></select>
+            </div>
+            <p class="hint">Keine Diskette zur Hand? <a href="#" id="qsDemo">Demo-Diskette einlegen</a> – ein kleines Regenbogen-Intro, direkt im Bootblock programmiert. Disketten-Images kannst du auch einfach auf dieses Fenster ziehen.</p>
+          </fieldset>
+          <div class="qs-foot">
+            <fieldset class="mini"><legend>Modus</legend>
+              <label class="chk"><input type="checkbox" id="qsMode"> Im Schnellstart-Modus starten</label>
+            </fieldset>
+          </div>
+        </div>
+
+        <!-- ---------- Konfigurationen ---------- -->
+        <div class="page" data-page="configs">
+          <fieldset><legend>Gespeicherte Konfigurationen</legend>
+            <div class="list-box" id="cfgList" role="listbox" aria-label="Konfigurationen"></div>
+            <div class="row"><label for="cfgName" class="lbl">Name:</label><input type="text" id="cfgName" class="grow" maxlength="60" placeholder="z. B. A1200 Spiele"></div>
+            <div class="row"><label for="cfgDesc" class="lbl">Beschreibung:</label><input type="text" id="cfgDesc" class="grow" maxlength="120"></div>
+            <div class="row btn-row">
+              <button class="btn" id="cfgLoad">Laden</button>
+              <button class="btn" id="cfgSave">Speichern</button>
+              <button class="btn" id="cfgDelete">Löschen</button>
+              <span class="row-fill"></span>
+              <button class="btn" id="cfgExport">Exportieren…</button>
+              <button class="btn" id="cfgImport">Importieren…</button>
+            </div>
+            <p class="hint">Gespeichert werden alle Einstellungen dieses Dialogs. ROM-Dateien und Disketten liegen getrennt im Browser-Speicher und werden über die Verlaufslisten wiedergefunden.</p>
+          </fieldset>
+          <fieldset><legend>Werkseinstellungen</legend>
+            <div class="row"><button class="btn" id="cfgDefaults">Alle Einstellungen zurücksetzen</button>
+            <button class="btn" id="cfgForget">Gespeicherte ROMs und Disketten löschen</button></div>
+          </fieldset>
+        </div>
+
+        <!-- ---------- CPU ---------- -->
+        <div class="page" data-page="cpu">
+          <div class="cols">
+            <fieldset><legend>CPU</legend>
+              <label class="rad"><input type="radio" name="cpuModel" value="68000"> 68000</label>
+              <label class="rad"><input type="radio" name="cpuModel" value="68010"> 68010</label>
+              <label class="rad"><input type="radio" name="cpuModel" value="68020"> 68020</label>
+              <label class="rad"><input type="radio" name="cpuModel" value="68030"> 68030</label>
+              <label class="rad off"><input type="radio" name="cpuModel" value="68040" disabled> 68040 <small>(nicht verfügbar)</small></label>
+              <label class="rad off"><input type="radio" name="cpuModel" value="68060" disabled> 68060 <small>(nicht verfügbar)</small></label>
+              <hr>
+              <label class="chk"><input type="checkbox" id="cpuAddr24"> 24-Bit-Adressierung</label>
+              <label class="chk"><input type="checkbox" id="cpuCompat"> Mehr Kompatibilität</label>
+            </fieldset>
+            <fieldset><legend>CPU-Geschwindigkeit</legend>
+              <label class="rad"><input type="radio" name="cpuSpeed" value="-1"> So schnell wie möglich</label>
+              <label class="rad"><input type="radio" name="cpuSpeed" value="0"> Annähernd A500/A1200 oder zyklusgenau</label>
+              <p class="hint">„So schnell wie möglich“ beschleunigt Workbench und Programme, kann aber Spiele mit festem Timing stören.</p>
+            </fieldset>
+            <fieldset><legend>FPU</legend>
+              <label class="rad"><input type="radio" name="fpu" checked> Keine</label>
+              <label class="rad off"><input type="radio" name="fpu" disabled> 68881 <small>(nicht verfügbar)</small></label>
+              <label class="rad off"><input type="radio" name="fpu" disabled> 68882 <small>(nicht verfügbar)</small></label>
+              <p class="hint">Der Emulationskern bildet noch keine Fließkommaeinheit nach.</p>
+            </fieldset>
+          </div>
+        </div>
+
+        <!-- ---------- Chipsatz ---------- -->
+        <div class="page" data-page="chipset">
+          <div class="cols">
+            <fieldset><legend>Chipsatz</legend>
+              <label class="rad"><input type="radio" name="chipMask" value="0"> OCS (Original)</label>
+              <label class="rad"><input type="radio" name="chipMask" value="1"> ECS Agnus</label>
+              <label class="rad"><input type="radio" name="chipMask" value="2"> ECS Denise</label>
+              <label class="rad"><input type="radio" name="chipMask" value="3"> Full ECS</label>
+              <label class="rad"><input type="radio" name="chipMask" value="7"> AGA</label>
+              <hr>
+              <label class="chk"><input type="checkbox" id="chipNtsc"> NTSC (60 Hz)</label>
+            </fieldset>
+            <fieldset><legend>Optionen</legend>
+              <label class="chk"><input type="checkbox" id="chipBlitImm"> Sofortiger Blitter</label>
+              <div class="row"><label for="chipBlitWait" class="lbl w-auto">Auf Blitter warten:</label>
+                <select id="chipBlitWait">
+                  <option value="0">Nie</option><option value="1">Automatisch</option><option value="2">Ohne Leerlauf</option><option value="3">Immer</option>
+                </select></div>
+            </fieldset>
+          </div>
+          <fieldset><legend>Kollisionserkennung</legend>
+            <div class="radio-line">
+              <label class="rad"><input type="radio" name="chipCol" value="0"> Aus</label>
+              <label class="rad"><input type="radio" name="chipCol" value="1"> Nur Sprites</label>
+              <label class="rad"><input type="radio" name="chipCol" value="2"> Sprites und Sprites gegen Playfield</label>
+              <label class="rad"><input type="radio" name="chipCol" value="3"> Vollständig (selten nötig)</label>
+            </div>
+          </fieldset>
+          <fieldset><legend>Chipsatz-Erweiterungen</legend>
+            <p id="chipFeatures" class="hint"></p>
+          </fieldset>
+        </div>
+
+        <!-- ---------- ROM ---------- -->
+        <div class="page" data-page="rom">
+          <fieldset><legend>Haupt-ROM (Kickstart)</legend>
+            <label class="rad"><input type="radio" name="romSrc" value="aros"> AROS – freier Kickstart-Ersatz (eingebaut, 512 KB + 512 KB Erweiterung)</label>
+            <label class="rad"><input type="radio" name="romSrc" value="file"> Eigene ROM-Datei</label>
+            <div class="row file-row"><span class="file-name" id="romName">– keine Datei –</span>
+              <button class="btn" id="romPick">Datei wählen…</button><button class="btn" id="romClear">Entfernen</button></div>
+            <p id="romInfo" class="hint"></p>
+          </fieldset>
+          <fieldset><legend>Erweiterungs-ROM</legend>
+            <div class="row file-row"><span class="file-name" id="extName">– keine Datei –</span>
+              <button class="btn" id="extPick">Datei wählen…</button><button class="btn" id="extClear">Entfernen</button></div>
+            <p class="hint">Nur für CDTV/CD32 oder besondere ROMs nötig. Bei AROS wird die Erweiterung automatisch geladen.</p>
+          </fieldset>
+          <fieldset><legend>ROM-Schlüssel (Cloanto „rom.key“)</legend>
+            <div class="row file-row"><span class="file-name" id="keyName">– keine Datei –</span>
+              <button class="btn" id="keyPick">Datei wählen…</button><button class="btn" id="keyClear">Entfernen</button></div>
+            <label class="chk"><input type="checkbox" id="romShifter"> Kickstart-Shifter (für sehr alte Spiele)</label>
+          </fieldset>
+        </div>
+
+        <!-- ---------- RAM ---------- -->
+        <div class="page" data-page="ram">
+          <fieldset><legend>Speichereinstellungen</legend>
+            <div class="mem-grid">
+              <label for="memChip">Chip:</label><input type="range" id="memChip" min="0" max="5" step="1"><output id="memChipOut"></output>
+              <label for="memSlow">Slow:</label><input type="range" id="memSlow" min="0" max="4" step="1"><output id="memSlowOut"></output>
+              <label for="memZ2">Z2 Fast:</label><input type="range" id="memZ2" min="0" max="5" step="1"><output id="memZ2Out"></output>
+              <label for="memZ3">Z3 Fast:</label><input type="range" id="memZ3" min="0" max="13" step="1"><output id="memZ3Out"></output>
+            </div>
+            <p id="memHint" class="hint"></p>
+          </fieldset>
+          <fieldset><legend>Erweiterter Speicher (A3000/A4000 Hauptplatine)</legend>
+            <div class="mem-grid">
+              <label for="memMbLow">Hauptplatine:</label><input type="range" id="memMbLow" min="0" max="7" step="1"><output id="memMbLowOut"></output>
+              <label for="memMbHigh">Prozessorslot:</label><input type="range" id="memMbHigh" min="0" max="8" step="1"><output id="memMbHighOut"></output>
+            </div>
+          </fieldset>
+        </div>
+
+        <!-- ---------- Diskettenlaufwerke ---------- -->
+        <div class="page" data-page="floppy">
+          <fieldset><legend>Laufwerke</legend>
+            <div id="fdRows"></div>
+          </fieldset>
+          <div class="cols">
+            <fieldset><legend>Laufwerksgeschwindigkeit</legend>
+              <div class="row"><input type="range" id="fdSpeed" min="0" max="4" step="1" class="grow" aria-label="Laufwerksgeschwindigkeit"><output id="fdSpeedOut" class="w-out"></output></div>
+              <p class="hint">„Turbo“ lädt am schnellsten, manche Kopierschutz-Spiele brauchen aber „100 %“.</p>
+            </fieldset>
+            <fieldset><legend>Neue Diskette</legend>
+              <div class="row"><label for="fdNewLabel" class="lbl w-auto">Name:</label><input type="text" id="fdNewLabel" class="grow" value="Leer" maxlength="30"></div>
+              <div class="row"><select id="fdNewType"><option value="1">3,5" DD (880 KB)</option><option value="2">3,5" HD (1,76 MB)</option></select>
+                <label class="chk"><input type="checkbox" id="fdNewFfs"> FFS</label>
+                <label class="chk"><input type="checkbox" id="fdNewBoot"> Bootfähig</label></div>
+              <div class="row"><select id="fdNewUnit"><option value="0">in DF0:</option><option value="1">in DF1:</option><option value="2">in DF2:</option><option value="3">in DF3:</option></select>
+                <button class="btn" id="fdNewCreate">Leere Diskette erzeugen</button></div>
+            </fieldset>
+          </div>
+        </div>
+
+        <!-- ---------- Festplatten ---------- -->
+        <div class="page" data-page="hd">
+          <fieldset><legend>IDE-Festplatten (Hardfile-Images)</legend>
+            <div id="hdRows"></div>
+            <p id="hdHint" class="hint"></p>
+          </fieldset>
+        </div>
+
+        <!-- ---------- Anzeige ---------- -->
+        <div class="page" data-page="display">
+          <fieldset><legend>Amiga-Bildschirm</legend>
+            <div class="grid2">
+              <label for="vidRes">Auflösung:</label>
+              <select id="vidRes"><option value="0">LowRes (320 Pixel)</option><option value="1">HighRes (640 Pixel)</option><option value="2">SuperHighRes (1280 Pixel)</option></select>
+              <label for="vidLine">Zeilenmodus:</label>
+              <select id="vidLine"><option value="0">Einfach</option><option value="1">Verdoppelt</option><option value="2">Scanlines</option></select>
+              <label for="vidApi">Grafik-Schnittstelle:</label>
+              <select id="vidApi"><option value="1">WebGL</option><option value="0">Canvas 2D</option></select>
+              <label for="vidScale">Skalierung:</label>
+              <select id="vidScale"><option value="fit">Fenster füllen (Seitenverhältnis halten)</option><option value="int">Ganzzahlig (scharfe Pixel)</option><option value="1">1-fach</option><option value="2">2-fach</option></select>
+              <label for="vidCursor">Mauszeiger:</label>
+              <select id="vidCursor"><option value="0">Immer sichtbar</option><option value="1">Über dem Bild verstecken</option><option value="2">Im Bild einfangen (empfohlen)</option></select>
+            </div>
+          </fieldset>
+          <fieldset><legend>Einstellungen</legend>
+            <label class="chk"><input type="checkbox" id="vidSkip"> Jedes zweite Bild auslassen (schont langsame Rechner)</label>
+            <label class="chk"><input type="checkbox" id="vidCenterX"> Bild waagerecht zentrieren</label>
+            <label class="chk"><input type="checkbox" id="vidCenterY"> Bild senkrecht zentrieren</label>
+            <label class="chk"><input type="checkbox" id="vidSmooth"> Bild glätten (statt scharfer Pixel)</label>
+          </fieldset>
+        </div>
+
+        <!-- ---------- Sound ---------- -->
+        <div class="page" data-page="sound">
+          <fieldset><legend>Soundausgabe</legend>
+            <label class="rad"><input type="radio" name="sndMode" value="0"> Aus (nicht emuliert)</label>
+            <label class="rad"><input type="radio" name="sndMode" value="1"> Aus, aber emuliert</label>
+            <label class="rad"><input type="radio" name="sndMode" value="2"> Ein</label>
+            <label class="rad"><input type="radio" name="sndMode" value="3"> Ein, höchste Genauigkeit</label>
+          </fieldset>
+          <fieldset><legend>Einstellungen</legend>
+            <div class="grid2">
+              <label for="sndFreq">Frequenz:</label>
+              <select id="sndFreq"><option value="0">Automatisch (wie Soundkarte)</option><option value="22050">22050 Hz</option><option value="44100">44100 Hz</option><option value="48000">48000 Hz</option></select>
+              <label for="sndCh">Kanäle:</label>
+              <select id="sndCh"><option value="1">Mono</option><option value="2">Stereo</option></select>
+              <label for="sndSep">Stereo-Trennung:</label>
+              <div class="row"><input type="range" id="sndSep" min="0" max="10" step="1" class="grow"><output id="sndSepOut" class="w-out"></output></div>
+              <label for="sndDelay">Stereo-Verzögerung:</label>
+              <select id="sndDelay"><option value="0">Keine</option><option value="1">2</option><option value="2">4</option><option value="3">8</option><option value="4">16</option><option value="5">32</option></select>
+              <label for="sndInterp">Interpolation:</label>
+              <select id="sndInterp"><option value="0">Keine</option><option value="1">Anti</option><option value="2">RH</option><option value="3">Crux</option></select>
+              <label for="sndFilter">Audiofilter:</label>
+              <select id="sndFilter"><option value="0">Immer aus</option><option value="1">Emuliert (Power-LED)</option><option value="2">Immer an</option></select>
+              <label for="sndFilterType">Filtertyp:</label>
+              <select id="sndFilterType"><option value="0">A500</option><option value="1">A1200</option></select>
+            </div>
+          </fieldset>
+        </div>
+
+        <!-- ---------- Gameports ---------- -->
+        <div class="page" data-page="ports">
+          <fieldset><legend>Port 0 (Maus-Port)</legend>
+            <div class="grid2" data-port="0"></div>
+          </fieldset>
+          <fieldset><legend>Port 1 (Joystick-Port)</legend>
+            <div class="grid2" data-port="1"></div>
+          </fieldset>
+          <p id="padInfo" class="hint"></p>
+        </div>
+
+        <!-- ---------- Eingabe ---------- -->
+        <div class="page" data-page="input">
+          <fieldset><legend>Tastatur</legend>
+            <label class="chk"><input type="checkbox" id="inKeyboard"> Tastatur an den Amiga weiterleiten</label>
+            <table class="keys">
+              <tr><td>Linke Amiga-Taste</td><td><kbd>Alt</kbd> links / <kbd>Windows</kbd> links</td></tr>
+              <tr><td>Rechte Amiga-Taste</td><td><kbd>Alt Gr</kbd> / <kbd>Windows</kbd> rechts</td></tr>
+              <tr><td>Help</td><td><kbd>Ende</kbd> oder <kbd>Bild ↓</kbd></td></tr>
+              <tr><td>Del</td><td><kbd>Entf</kbd></td></tr>
+              <tr><td>Reset</td><td>Strg + beide Amiga-Tasten oder Schaltfläche „Reset“</td></tr>
+            </table>
+          </fieldset>
+          <fieldset><legend>Maus</legend>
+            <p class="hint">Beim Klick ins Bild wird der Mauszeiger eingefangen, wenn unter <a href="#" data-goto="display">Anzeige</a> „Im Bild einfangen“ gewählt ist. Mit <kbd>Esc</kbd> gibst du ihn wieder frei.</p>
+          </fieldset>
+        </div>
+
+        <!-- ---------- Filter ---------- -->
+        <div class="page" data-page="filter">
+          <fieldset><legend>Röhrenbildschirm</legend>
+            <div class="grid2">
+              <label for="fltScan">Scanlines:</label>
+              <div class="row"><input type="range" id="fltScan" min="0" max="100" step="5" class="grow"><output id="fltScanOut" class="w-out"></output></div>
+              <label for="fltVig">Randabdunklung:</label>
+              <div class="row"><input type="range" id="fltVig" min="0" max="100" step="5" class="grow"><output id="fltVigOut" class="w-out"></output></div>
+              <label for="fltGlow">Leuchten:</label>
+              <div class="row"><input type="range" id="fltGlow" min="0" max="100" step="5" class="grow"><output id="fltGlowOut" class="w-out"></output></div>
+            </div>
+          </fieldset>
+          <fieldset><legend>Bildeinstellungen</legend>
+            <div class="grid2">
+              <label for="fltLum">Helligkeit:</label>
+              <div class="row"><input type="range" id="fltLum" min="-200" max="200" step="10" class="grow"><output id="fltLumOut" class="w-out"></output></div>
+              <label for="fltCon">Kontrast:</label>
+              <div class="row"><input type="range" id="fltCon" min="-200" max="200" step="10" class="grow"><output id="fltConOut" class="w-out"></output></div>
+              <label for="fltGam">Gamma:</label>
+              <div class="row"><input type="range" id="fltGam" min="-200" max="200" step="10" class="grow"><output id="fltGamOut" class="w-out"></output></div>
+            </div>
+            <div class="row"><button class="btn" id="fltReset">Filter zurücksetzen</button></div>
+            <p class="hint">Röhren-Effekte wirken sofort. Helligkeit, Kontrast und Gamma rechnet der Emulator selbst; sie gelten ab dem nächsten Start.</p>
+          </fieldset>
+        </div>
+
+        <!-- ---------- Diskettenwechsler ---------- -->
+        <div class="page" data-page="swapper">
+          <fieldset><legend>Disketten-Sammlung</legend>
+            <div class="list-box tall" id="swapList" role="listbox" aria-label="Diskettensammlung"></div>
+            <div class="row btn-row">
+              <button class="btn" id="swAdd">Disketten hinzufügen…</button>
+              <span class="row-fill"></span>
+              <button class="btn" id="swDf0">→ DF0:</button>
+              <button class="btn" id="swDf1">→ DF1:</button>
+              <button class="btn" id="swDel">Entfernen</button>
+            </div>
+            <p class="hint">Mehrteilige Spiele: alle Disketten hier sammeln, dann während des Spiels mit <kbd>F12</kbd> wechseln. Die Sammlung bleibt im Browser gespeichert.</p>
+          </fieldset>
+        </div>
+
+        <!-- ---------- Verschiedenes ---------- -->
+        <div class="page" data-page="misc">
+          <fieldset><legend>Verhalten</legend>
+            <label class="chk"><input type="checkbox" id="miscPauseBg"> Pausieren, wenn das Browserfenster im Hintergrund ist</label>
+            <label class="chk"><input type="checkbox" id="miscPauseDlg"> Pausieren, solange dieser Dialog offen ist</label>
+            <label class="chk"><input type="checkbox" id="miscStatus"> Statusleiste mit Laufwerks-LEDs anzeigen</label>
+            <label class="chk"><input type="checkbox" id="miscToolbar"> Werkzeugleiste anzeigen</label>
+            <label class="chk"><input type="checkbox" id="miscRemember"> ROMs und Disketten im Browser merken</label>
+            <label class="chk"><input type="checkbox" id="miscAutoStart"> Beim Öffnen der Seite sofort starten</label>
+          </fieldset>
+          <fieldset><legend>Schnittstellen</legend>
+            <label class="chk"><input type="checkbox" id="miscSerial"> Serielle Ausgabe in die Browser-Konsole schreiben</label>
+          </fieldset>
+        </div>
+
+      </div><!-- /pages -->
+    </div><!-- /prop-body -->
+
+    <footer class="prop-foot">
+      <button class="btn" id="btnReset" disabled>Zurücksetzen</button>
+      <button class="btn" id="btnQuit">Beenden</button>
+      <span class="row-fill"></span>
+      <button class="btn default" id="btnStart">Start</button>
+      <button class="btn" id="btnCancel">Abbrechen</button>
+      <button class="btn" id="btnHelp">Hilfe</button>
+    </footer>
+  </section>
+  </div>
+
+  <!-- Ausgeschaltet -->
+  <section id="offScreen" hidden>
+    <div class="off-card">
+      <svg class="off-icon"><use href="#i-power"/></svg>
+      <p>Der Amiga ist ausgeschaltet.</p>
+      <button class="btn default" id="btnPowerOn">Einstellungen öffnen</button>
+    </div>
+  </section>
+</div>
+
+<!-- Nachrichtenfenster -->
+<div id="msgLayer" hidden>
+  <section class="win msg" role="alertdialog" aria-labelledby="msgTitle" aria-describedby="msgText">
+    <header class="win-title"><span class="win-icon"><svg><use href="#i-root"/></svg></span><span id="msgTitle" class="win-caption">AmigaWerk</span></header>
+    <div class="msg-body"><div id="msgText"></div></div>
+    <footer class="msg-foot" id="msgBtns"></footer>
+  </section>
+</div>
+
+<input type="file" id="fileInput" hidden>
+
+<!-- Emulationskern (Reihenfolge beibehalten) -->
+<script src="sae/prototypes.js"></script>
+<script src="sae/utils.js"></script>
+<script src="sae/dms.js"></script>
+<script src="sae/config.js"></script>
+<script src="sae/roms.js"></script>
+<script src="sae/memory.js"></script>
+<script src="sae/autoconf.js"></script>
+<script src="sae/expansion.js"></script>
+<script src="sae/events.js"></script>
+<script src="sae/gayle.js"></script>
+<script src="sae/ide.js"></script>
+<script src="sae/filesys.js"></script>
+<script src="sae/hardfile.js"></script>
+<script src="sae/dongle.js"></script>
+<script src="sae/input.js"></script>
+<script src="sae/serpar.js"></script>
+<script src="sae/custom.js"></script>
+<script src="sae/blitter.js"></script>
+<script src="sae/copper.js"></script>
+<script src="sae/playfield.js"></script>
+<script src="sae/video.js"></script>
+<script src="sae/audio.js"></script>
+<script src="sae/cia.js"></script>
+<script src="sae/disk.js"></script>
+<script src="sae/rtc.js"></script>
+<script src="sae/m68k.js"></script>
+<script src="sae/cpu.js"></script>
+<script src="sae/amiga.js"></script>
+<!-- freier Kickstart-Ersatz -->
+<script src="roms/aros.js"></script>
+<!-- Oberfläche -->
+<script src="js/files.js"></script>
+<script src="js/demodisk.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
